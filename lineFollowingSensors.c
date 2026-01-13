@@ -15,8 +15,7 @@ for (i=0;i<5;i++)
  {
 AnalogValue[i]=analogRead(AnalogPin[i]);
    
-Serial.print(AnalogValue[i]); // This prints the actual analog sensor
-reading
+Serial.print(AnalogValue[i]); // This prints the actual analog sensor reading
 Serial.print("\t"); //tab over on screen
  if(i==4)
   {
