@@ -1,5 +1,5 @@
-int motor1PWM = 4;
-int motor1Phase = 5;
+int motor1PWM = 37;
+int motor1Phase = 38;
 // the setup routine runs once when you press reset:
 void setup() {
   Serial.begin(9600);
