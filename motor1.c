@@ -19,7 +19,7 @@ void setup() {
 void motorFWD(int PWM)
 {
   digitalWrite(motor1Phase, HIGH);
-  digitalWrite(motor2Phase, HIGH);
+  digitalWrite(motor2Phase, LOW);
 
   digitalWrite(motor1PWM, PWM);
   digitalWrite(motor2PWM, PWM);
@@ -28,11 +28,23 @@ void motorFWD(int PWM)
 void motorBWD(int PWM)
 {
   digitalWrite(motor1Phase, LOW);
-  digitalWrite(motor2Phase, LOW);
+  digitalWrite(motor2Phase, HIGH);
 
   digitalWrite(motor1PWM, PWM);
   digitalWrite(motor2PWM, PWM);
 }
+
+void turnCW()
+{
+
+}
+
+//Code will turn keep left motor off and turn right motor
+void turnCCW()
+{
+
+}
+
 // the loop routine runs over and over again continuously:
 void loop() {
   motorFWD(100);
