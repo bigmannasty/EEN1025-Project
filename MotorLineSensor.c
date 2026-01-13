@@ -10,8 +10,7 @@ void loop() {
 
   //Code will retrieve sensor values continuously
   int i;
-  for (i = 0; i < 5; i++) 
-  {
+  for (i = 0; i < 5; i++) {
     AnalogValue[i] = analogRead(AnalogPin[i]);
     //FOR DEBUGGING
     /*
@@ -24,16 +23,18 @@ delay(600); // display new set of readings every 600mS
   }
 */
   }
-  //If most left sensors are high , turn right
-  //Code rn is incorrect! Just adding if statements
-  //Speed change based on difference
-  if ((AnalogValue[0] && AnalogValue[1]) == 0)
-  {
+  //Middle Sensor
+  if (AnalogValue[2] >= 300) {
+    
+    //Left Sensors
+    if (AnalogValue[0] >= 2000) &&(AnalogValue[1] >= 1500) {
+        //Motor Turn Right
+      }
 
-  }
-  else if ((AnalogValue[3] && AnalogValue[4]) == 0)
-  {
-
+    //Right Sensors
+    if (AnalogValue[4] >= 2000) &&(AnalogValue[3] >= 1500) {
+        //Motor Turn Left
+      }
   }
 }
 
@@ -41,5 +42,8 @@ delay(600); // display new set of readings every 600mS
 TO DO:
 
 1. Introduce speed change based on difference in sensor readings of left sensors and right sensors
+Black >= 2600
+White <= 300
+
 
 */
