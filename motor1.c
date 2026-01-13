@@ -14,18 +14,31 @@ void setup() {
   pinMode(motor2Phase, OUTPUT);
 
  }
+
+
+void motorFWD(int PWM)
+{
+  digitalWrite(motor1Phase, HIGH);
+  digitalWrite(motor2Phase, HIGH);
+
+  digitalWrite(motor1PWM, PWM);
+  digitalWrite(motor2PWM, PWM);
+}
+
+void motorBWD(int PWM)
+{
+  digitalWrite(motor1Phase, LOW);
+  digitalWrite(motor2Phase, LOW);
+
+  digitalWrite(motor1PWM, PWM);
+  digitalWrite(motor2PWM, PWM);
+}
 // the loop routine runs over and over again continuously:
 void loop() {
-  digitalWrite(motor1Phase, HIGH); //forward
-  analogWrite(motor1PWM, 100); // set speed of motor
-  digitalWrite(motor2Phase, HIGH); //forward
-  analogWrite(motor2PWM, 100); // set speed of motor
+  motorFWD(100);
   Serial.println("Forward"); // Display motor direction
   delay(2000); //2 seconds
-  digitalWrite(motor1Phase, LOW); //Backward
-  analogWrite(motor1PWM, 100); // set speed of motor
-  digitalWrite(motor2Phase, LOW); //Backward
-  analogWrite(motor2PWM, 100); // set speed of motor
+  motorBWD(100);
   Serial.println("Backward"); // Display motor direction
   delay(2000); //2 seconds
 }
