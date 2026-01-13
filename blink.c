@@ -1,5 +1,5 @@
 #include <Adafruit_NeoPixel.h>
-#define PIN 48 // Or 38, depending on your S3 DevKit version!
+#define PIN 38 // Or 38, depending on your S3 DevKit version!
 #define NUMPIXELS 1
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 #define DELAYVAL 500
