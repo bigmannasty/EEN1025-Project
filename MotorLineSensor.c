@@ -25,7 +25,7 @@ delay(600); // display new set of readings every 600mS
   }
   //Middle Sensor
   if (AnalogValue[2] >= 300) {
-    
+
     //Left Sensors
     if (AnalogValue[0] >= 2000) &&(AnalogValue[1] >= 1500) {
         //Motor Turn Right
@@ -35,6 +35,10 @@ delay(600); // display new set of readings every 600mS
     if (AnalogValue[4] >= 2000) &&(AnalogValue[3] >= 1500) {
         //Motor Turn Left
       }
+  }
+  else
+  {
+    //Turn Mobot Backwards
   }
 }
 
