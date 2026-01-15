@@ -68,14 +68,14 @@ delay(600); // display new set of readings every 600mS
     motorFWD(100);
 
     //Left Sensors
-    if (AnalogValue[0] >= 2000) &&(AnalogValue[1] >= 1500) {
+    if ((AnalogValue[0] >= 2000) && (AnalogValue[1] >= 1500)) {
         //Motor Turn Left
         motor_turn(80, 40);
         delay(100);
       }
 
     //Right Sensors
-    if (AnalogValue[4] >= 2000) &&(AnalogValue[3] >= 1500) {
+    if ((AnalogValue[4] >= 2000) && (AnalogValue[3] >= 1500)) {
         //Motor Turn Right
         motor_turn(40, 80);
         delay(100);
