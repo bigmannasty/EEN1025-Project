@@ -7,6 +7,7 @@ int motor1Phase = 38;
 int motor2PWM = 39;
 int motor2Phase = 20;
 
+//intitialise threshold, base motor speed, and turn gain
 const int WHITE_THRESHOLD = 1000;
 const int BASE_SPEED = 125;
 const int TURN_GAIN = 35;
@@ -21,6 +22,7 @@ void setup() {
   pinMode(motor2Phase, OUTPUT);
 }
 
+//function to drive each motor at controlled pwm
 void motorDrive(int leftPWM, int rightPWM) {
   leftPWM = constrain(leftPWM, 0, 255);
   rightPWM = constrain(rightPWM, 0, 255);
@@ -29,6 +31,7 @@ void motorDrive(int leftPWM, int rightPWM) {
   analogWrite(motor2PWM, rightPWM);
 }
 
+//function to set direction of motors
 void motorDir(int dir) {
   if (dir == 0){
     digitalWrite(motor1Phase, LOW);
@@ -42,13 +45,13 @@ void motorDir(int dir) {
 }
 
 
-int weights[5] = {-2, -1, 0, 1, 2};
-
-int correction;
+int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
+int correction; // corection var
 
 
 void loop() {
 
+  //intialise error and line detect vars
   int error = 0;
   bool lineDetected = false;
 
@@ -61,8 +64,9 @@ void loop() {
     }
   }
 
-  motorDir(0);
+  motorDir(0); //set motor direction to forward
 
+  //find required correction and set each wheel speed
   correction = error * TURN_GAIN;
   int leftSpeed = BASE_SPEED;
   int rightSpeed = BASE_SPEED;
@@ -72,6 +76,7 @@ void loop() {
     rightSpeed -= correction;
   }
 
+  //yeah, i drive
   motorDrive(rightSpeed, leftSpeed);
 }
 
