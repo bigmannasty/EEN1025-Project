@@ -7,9 +7,9 @@ int motor1Phase = 38;
 int motor2PWM = 39;
 int motor2Phase = 20;
 
-const int WHITE_THRESHOLD = 300;
-const int BASE_SPEED = 90;
-const int TURN_GAIN = 25;
+const int WHITE_THRESHOLD = 1000;
+const int BASE_SPEED = 125;
+const int TURN_GAIN = 35;
 
 void setup() {
   Serial.begin(9600);
@@ -41,22 +41,20 @@ void motorDir(int dir) {
 
 }
 
-int error = 0;
+
 int weights[5] = {-2, -1, 0, 1, 2};
-bool lineDetected = false;
+
 int correction;
-int leftSpeed = BASE_SPEED;
-int rightSpeed = BASE_SPEED;
+
 
 void loop() {
 
-  
+  int error = 0;
+  bool lineDetected = false;
 
   //Code will retrieve sensor values continuously
   for (int i = 0; i < 5; i++) {
     AnalogValue[i] = analogRead(AnalogPin[i]);
-    Serial.println(i, AnalogValue[i]);
-  
   if (AnalogValue[i] <= WHITE_THRESHOLD) {
       error += weights[i];
       if (i == 2) {lineDetected = true;}
@@ -66,57 +64,22 @@ void loop() {
   motorDir(0);
 
   correction = error * TURN_GAIN;
+  int leftSpeed = BASE_SPEED;
+  int rightSpeed = BASE_SPEED;
 
   if (!lineDetected) {
     leftSpeed += correction;
     rightSpeed -= correction;
   }
 
-  Serial.println("Left:", leftSpeed, "Right:", rightSpeed);
-
-  /*
-  if (lineDetected) {
-    leftSpeed = BASE_SPEED;
-    rightSpeed = BASE_SPEED;
-  }
-  */
-
-  //motorDrive(leftSpeed, rightSpeed);
-
-  
-
-
-/*
-  //Middle Sensor
-  if (AnalogValue[2] <= 300) {
-    
-    //Vehicle will start when detecting white line from middle sensor
-    motorBWD(100);
-
-    //Left Sensors
-    if ((AnalogValue[0] >= 2000) && (AnalogValue[1] >= 1500)) {
-        //Motor Turn Left
-        motor_turn(80, 40);
-        delay(100);
-      }
-
-    //Right Sensors
-    if ((AnalogValue[4] >= 2000) && (AnalogValue[3] >= 1500)) {
-        //Motor Turn Right
-        motor_turn(40, 80);
-        delay(100);
-      }
-  } else {
-    //Turn motors off as soon as middle sensor no longer detects a white line (vehicle has gone off course)
-  }
-  */
+  motorDrive(rightSpeed, leftSpeed);
 }
 
 /*
 ----
 Notes:
 Black >= 2600
-White <= 300
+White <= 500
 Sensors range from 200 to 4095 typically
 
 ----
@@ -131,9 +94,4 @@ Operation:
   3b. This could be done with an error variable, if larger than 0, we need to turn right and if less than 0, we need to turn left.
 
 ----
-TO DO:
-1. Optimise the ratio of turning for vehicle by using sensors closer to middle
-2. Backward movement so vehicle can go back on track on its own?
-3. Try see if line detection can be changed into interrupts instead of if statements for stability
-
 */
