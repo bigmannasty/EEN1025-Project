@@ -20,16 +20,16 @@ void setup() {
 
 void motorFWD(int PWM) {
   //As wheels are on opposite axis, one motor turns forward and one turns backward to drive vehicle
-  digitalWrite(motor1Phase, HIGH);
-  digitalWrite(motor2Phase, LOW);
+  digitalWrite(motor1Phase, LOW);
+  digitalWrite(motor2Phase, HIGH);
 
   digitalWrite(motor1PWM, PWM);
   digitalWrite(motor2PWM, PWM);
 }
 
 void motorBWD(int PWM) {
-  digitalWrite(motor1Phase, LOW);
-  digitalWrite(motor2Phase, HIGH);
+  digitalWrite(motor1Phase, HIGH);
+  digitalWrite(motor2Phase, LOW);
 
   digitalWrite(motor1PWM, PWM);
   digitalWrite(motor2PWM, PWM);
