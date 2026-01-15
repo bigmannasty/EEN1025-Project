@@ -8,7 +8,7 @@ int motor2PWM = 39;
 int motor2Phase = 20;
 
 const int WHITE_THRESHOLD = 300;
-const int BASE_SPEED = 50;
+const int BASE_SPEED = 90;
 const int TURN_GAIN = 25;
 
 void setup() {
@@ -62,14 +62,18 @@ void loop() {
   
   if (AnalogValue[i] <= WHITE_THRESHOLD) {
       error += weights[i];
-      lineDetected = true;
+      if (i == 2) lineDetected = true;
     }
   }
 
   int correction = error * TURN_GAIN;
+  int leftSpeed = BASE_SPEED;
+  int rightSpeed = BASE_SPEED;
 
-  int leftSpeed = BASE_SPEED - correction;
-  int rightSpeed = BASE_SPEED + correction;
+  if (!lineDetected) {
+    leftSpeed -= correction;
+    rightSpeed += correction;
+  }
 
   motorDrive(leftSpeed, rightSpeed);
 
