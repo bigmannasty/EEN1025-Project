@@ -62,10 +62,10 @@ delay(600); // display new set of readings every 600mS
   }
 
   //Middle Sensor
-  if (AnalogValue[2] >= 300) {
+  if (AnalogValue[2] <= 300) {
     
     //Vehicle will start when detecting white line from middle sensor
-    motorFWD(100);
+    motorBWD(100);
 
     //Left Sensors
     if ((AnalogValue[0] >= 2000) && (AnalogValue[1] >= 1500)) {
@@ -82,7 +82,6 @@ delay(600); // display new set of readings every 600mS
       }
   } else {
     //Turn motors off as soon as middle sensor no longer detects a white line (vehicle has gone off course)
-    motorFWD(0);
   }
 }
 
@@ -97,7 +96,7 @@ Sensors range from 200 to 4095 typically
 Operation:
 1. Vehicle will not run until it detects the white line in the middle.
 
-2. When middle sensor is above 300, vehicle will begin detecting line and moving forward.
+2. When middle sensor is below 300, vehicle will begin detecting line and moving forward.
   2a. Vehicle should automatically adjust angle so it is driving as parallel to white line as possible.
 
 3. When a turn is detected, vehicle needs to change PWM to change angle according to white line.
