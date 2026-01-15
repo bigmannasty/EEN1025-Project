@@ -1,4 +1,4 @@
-int AnalogValue[5] = { 0, 0, 0, 0, 0 };
+int AnalogValue[5]; //intialise 0s
 int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
 
 //Initialisation of pins to control motor
@@ -6,6 +6,10 @@ int motor1PWM = 37;
 int motor1Phase = 38;
 int motor2PWM = 39;
 int motor2Phase = 20;
+
+const int WHITE_THRESHOLD = 300;
+const int BASE_SPEED = 50;
+const int TURN_GAIN = 25;
 
 void setup() {
   Serial.begin(9600);
@@ -17,22 +21,24 @@ void setup() {
   pinMode(motor2Phase, OUTPUT);
 }
 
-
-void motorFWD(int PWM) {
-  //As wheels are on opposite axis, one motor turns forward and one turns backward to drive vehicle
-  digitalWrite(motor1Phase, LOW);
-  digitalWrite(motor2Phase, HIGH);
-
-  digitalWrite(motor1PWM, PWM);
-  digitalWrite(motor2PWM, PWM);
+void motorDrive(int leftPWM, rightPWM) {
+  leftPWM = constrain(leftPWM, 0, 255);
+  rightPWM = constrain(rightPWM, 0, 255);
+  
+  analogWrite(motor1PWM, leftPWM);
+  analogWrite(motor2PWM, rightPWM);
 }
 
-void motorBWD(int PWM) {
-  digitalWrite(motor1Phase, HIGH);
-  digitalWrite(motor2Phase, LOW);
+void motorDir(int dir) {
+  if (dir == 0){
+    digitalWrite(motor1Phase, LOW);
+    digitalWrite(motor2Phase, HIGH);
+  }
+  else {
+    digitalWrite(motor1Phase, HIGH);
+    digitalWrite(motor2Phase, LOW);
+  }
 
-  digitalWrite(motor1PWM, PWM);
-  digitalWrite(motor2PWM, PWM);
 }
 
 void motor_turn(int PWM_l, int PWM_r) {
@@ -45,22 +51,28 @@ void motor_turn(int PWM_l, int PWM_r) {
 
 void loop() {
 
+  int error = 0;
+  int weights[5] = {-2, -1, 0, 1, 2};
+  bool lineDetected = false;
+
   //Code will retrieve sensor values continuously
-  int i;
-  for (i = 0; i < 5; i++) {
+  for (int i = 0; i < 5; i++) {
     AnalogValue[i] = analogRead(AnalogPin[i]);
-    //FOR DEBUGGING
-    /*
-Serial.print(AnalogValue[i]); // This prints the actual analog sensor reading
-Serial.print("\t"); //tab over on screen
- if(i==4)
-  {
-Serial.println(""); //carriage return
-delay(600); // display new set of readings every 600mS
-  }
-*/
+  
+  if (AnalogValue[i] <= WHITE_THRESHOLD) {
+      error += weights[i];
+      lineDetected = true;
+    }
   }
 
+  int correction = error * TURN_GAIN;
+
+  int leftSpeed = BASE_SPEED - correction;
+  int rightSpeed = BASE_SPEED + correction;
+
+  
+
+/*
   //Middle Sensor
   if (AnalogValue[2] <= 300) {
     
@@ -83,6 +95,7 @@ delay(600); // display new set of readings every 600mS
   } else {
     //Turn motors off as soon as middle sensor no longer detects a white line (vehicle has gone off course)
   }
+  */
 }
 
 /*
