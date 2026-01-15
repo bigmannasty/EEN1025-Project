@@ -71,21 +71,9 @@ void loop() {
   int leftSpeed = BASE_SPEED - correction;
   int rightSpeed = BASE_SPEED + correction;
 
-  motorDir(0);
-  motorDrive(90, 90);
-  delay(1500);
-  motorDrive(45,90);
-  delay(1500);
-  motorDrive(90,45);
-  delay(1500);
+  motorDrive(leftSpeed, rightSpeed);
 
-  motorDir(1);
-  motorDrive(90, 90);
-  delay(1500);
-  motorDrive(45,90);
-  delay(1500);
-  motorDrive(90,45);
-  delay(1500);
+  
 
 
 /*
