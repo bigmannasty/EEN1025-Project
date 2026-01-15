@@ -41,14 +41,6 @@ void motorDir(int dir) {
 
 }
 
-void motor_turn(int PWM_l, int PWM_r) {
-  digitalWrite(motor1Phase, HIGH);
-  digitalWrite(motor2Phase, LOW);
-
-  digitalWrite(motor1PWM, PWM_l);
-  digitalWrite(motor2PWM, PWM_r);
-}
-
 
 void loop() {
 
@@ -66,14 +58,23 @@ void loop() {
     }
   }
 
+  motorDir(0);
+
   int correction = error * TURN_GAIN;
   int leftSpeed = BASE_SPEED;
   int rightSpeed = BASE_SPEED;
 
   if (!lineDetected) {
-    leftSpeed -= correction;
-    rightSpeed += correction;
+    leftSpeed += correction;
+    rightSpeed -= correction;
   }
+
+  /*
+  if (lineDetected) {
+    leftSpeed = BASE_SPEED;
+    rightSpeed = BASE_SPEED;
+  }
+  */
 
   motorDrive(leftSpeed, rightSpeed);
 
