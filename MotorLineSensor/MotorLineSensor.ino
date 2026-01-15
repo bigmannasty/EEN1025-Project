@@ -21,7 +21,7 @@ void setup() {
   pinMode(motor2Phase, OUTPUT);
 }
 
-void motorDrive(int leftPWM, rightPWM) {
+void motorDrive(int leftPWM, int rightPWM) {
   leftPWM = constrain(leftPWM, 0, 255);
   rightPWM = constrain(rightPWM, 0, 255);
   
@@ -49,6 +49,7 @@ void motor_turn(int PWM_l, int PWM_r) {
   digitalWrite(motor2PWM, PWM_r);
 }
 
+
 void loop() {
 
   int error = 0;
@@ -70,7 +71,22 @@ void loop() {
   int leftSpeed = BASE_SPEED - correction;
   int rightSpeed = BASE_SPEED + correction;
 
-  
+  motorDir(0);
+  motorDrive(90, 90);
+  delay(1500);
+  motorDrive(45,90);
+  delay(1500);
+  motorDrive(90,45);
+  delay(1500);
+
+  motorDir(1);
+  motorDrive(90, 90);
+  delay(1500);
+  motorDrive(45,90);
+  delay(1500);
+  motorDrive(90,45);
+  delay(1500);
+
 
 /*
   //Middle Sensor
