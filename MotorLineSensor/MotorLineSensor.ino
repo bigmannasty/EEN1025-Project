@@ -41,33 +41,38 @@ void motorDir(int dir) {
 
 }
 
+int error = 0;
+int weights[5] = {-2, -1, 0, 1, 2};
+bool lineDetected = false;
+int correction;
+int leftSpeed = BASE_SPEED;
+int rightSpeed = BASE_SPEED;
 
 void loop() {
 
-  int error = 0;
-  int weights[5] = {-2, -1, 0, 1, 2};
-  bool lineDetected = false;
+  
 
   //Code will retrieve sensor values continuously
   for (int i = 0; i < 5; i++) {
     AnalogValue[i] = analogRead(AnalogPin[i]);
+    Serial.println(i, AnalogValue[i]);
   
   if (AnalogValue[i] <= WHITE_THRESHOLD) {
       error += weights[i];
-      if (i == 2) lineDetected = true;
+      if (i == 2) {lineDetected = true;}
     }
   }
 
   motorDir(0);
 
-  int correction = error * TURN_GAIN;
-  int leftSpeed = BASE_SPEED;
-  int rightSpeed = BASE_SPEED;
+  correction = error * TURN_GAIN;
 
   if (!lineDetected) {
     leftSpeed += correction;
     rightSpeed -= correction;
   }
+
+  Serial.println("Left:", leftSpeed, "Right:", rightSpeed);
 
   /*
   if (lineDetected) {
@@ -76,7 +81,7 @@ void loop() {
   }
   */
 
-  motorDrive(leftSpeed, rightSpeed);
+  //motorDrive(leftSpeed, rightSpeed);
 
   
 
