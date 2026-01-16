@@ -8,9 +8,12 @@ int motor2PWM = 39;
 int motor2Phase = 20;
 
 //intitialise threshold, base motor speed, and turn gain
-const int WHITE_THRESHOLD = 1000;
-const int BASE_SPEED = 125;
-const int TURN_GAIN = 35;
+const int WHITE_THRESHOLD = 500;
+
+//Fastest speed and turn_gain mobot can have before errors
+//Alternative BASE_SPEED is 125 with TURN_GAIN = 35
+const int BASE_SPEED = 255;
+const int TURN_GAIN = 100;
 
 void setup() {
   Serial.begin(9600);
