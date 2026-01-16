@@ -19,3 +19,11 @@ void loop() {
   Serial.println("");
   delay(600);
 }
+
+/*
+NOTES:
+
+1. Distance sensor seems to range from roughly 55 to 3400, reading gets higher as object is closer to sensor
+2. If object is too close, sensor malfunctions and spits out numbers from 50-70
+3. When an object is detected and removed, sensor reading oscillates sometimes
+*/
