@@ -1,3 +1,10 @@
+#include <WiFi.h>
+
+//WiFi Details
+char ssid[] = "IOT";
+char password[] = "needlings84wheezily";
+WiFiClient client;
+
 int AnalogValue[5]; //intialise 0s
 int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
 
@@ -15,19 +22,24 @@ int motor2Phase = 20;
 const int WHITE_THRESHOLD = 500;
 
 //Fastest speed and turn_gain mobot can have before errors
-const int speedL = 242;
 const int speedR = 255;
+const int speedL = int(speedR * 0.95);
 const int TURN_GAIN = 110;
 
-void setup() {
-  Serial.begin(9600);
+// set up the weightings for each sensor
+int weights[5] = {-2, -1, 0, 1, 2}; 
 
-  // Wheel initialisation
-  pinMode(motor1PWM, OUTPUT);
-  pinMode(motor1Phase, OUTPUT);
-  pinMode(motor2PWM, OUTPUT);
-  pinMode(motor2Phase, OUTPUT);
-}
+// corection var
+int correction; 
+
+//distance sense boolean
+bool obstacleDetected;
+
+//var for detecting nodes
+int activeSensors; 
+
+bool nodeDetected = false;
+
 
 //function to drive each motor at controlled pwm
 void motorDrive(int leftPWM, int rightPWM) {
@@ -64,21 +76,45 @@ void motorTurn(int dir) {
   motorDrive(100,100);
 }
 
-int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
-int correction; // corection var
-bool obstacleDetected; //distance sense boolean
-int activeSensors; //var for detecting nodes
-bool nodeDetected = false;
+void connectToWiFi() {
+  Serial.print("Connecting to Network: ");
+  Serial.print(ssid);
+  Serial.flush();
 
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    Serial.flush();
+    delay(300);
+  }
+  Serial.println("Connected");
+  Serial.print("Obtaining IP address");
+  Serial.flush();
+
+  while (WiFi.localIP() == INADDR_NONE) {
+    Serial.print(".");
+    Serial.flush();
+    delay(300);
+  }
+  Serial.println();
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void setup() {
+  Serial.begin(9600);
+  connectToWiFi();
+  // Wheel initialisation
+  pinMode(motor1PWM, OUTPUT);
+  pinMode(motor1Phase, OUTPUT);
+  pinMode(motor2PWM, OUTPUT);
+  pinMode(motor2Phase, OUTPUT);
+}
 
 void loop() {
 
   //check distance sensor
   DistanceValue = analogRead(distAnalogPin);
-  Serial.print("Distance:");
-  Serial.print(" ");
-  Serial.print(DistanceValue);
-  Serial.println("");
   if (DistanceValue >= 1000) {
     motorDrive(0,0);
     obstacleDetected = true;
