@@ -64,13 +64,6 @@ void motorTurn(int dir) {
   motorDrive(100,100);
 }
 
-bool lineDetection() {
-
-  
-  return lineDetected;
-}
-
-
 int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
 int correction; // corection var
 bool obstacleDetected; //distance sense boolean
