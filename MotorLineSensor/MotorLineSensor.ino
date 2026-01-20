@@ -15,8 +15,8 @@ int motor2Phase = 20;
 const int WHITE_THRESHOLD = 500;
 
 //Fastest speed and turn_gain mobot can have before errors
-const int speedL = 242;
 const int speedR = 255;
+const int speedL = int(speedR * 0.95);
 const int TURN_GAIN = 110;
 
 void setup() {
@@ -27,6 +27,16 @@ void setup() {
   pinMode(motor1Phase, OUTPUT);
   pinMode(motor2PWM, OUTPUT);
   pinMode(motor2Phase, OUTPUT);
+
+  xTaskCreatePinnedToCore (
+  loop2,     // Function to implement the task
+  "loop2",   // Name of the task
+  2048,      // Stack size in bytes
+  NULL,      // Task input parameter
+  0,         // Priority of the task
+  NULL,      // Task handle.
+  0          // Core where the task should run
+  );
 }
 
 //function to drive each motor at controlled pwm
@@ -75,10 +85,6 @@ void loop() {
 
   //check distance sensor
   DistanceValue = analogRead(distAnalogPin);
-  Serial.print("Distance:");
-  Serial.print(" ");
-  Serial.print(DistanceValue);
-  Serial.println("");
   if (DistanceValue >= 1000) {
     motorDrive(0,0);
     obstacleDetected = true;
@@ -103,10 +109,11 @@ void loop() {
     }
   }
 
-  if (activeSensors >= 4) nodeDetected = true; //checking for node
+  //if (activeSensors >= 4) nodeDetected = true; //checking for node
 
   motorDir(0); //set motor direction to forward
 
+  /*
   //turn-around on node loop
   if (nodeDetected = true) {
     motorDrive(100,100);//move forward a bit before turn
@@ -121,7 +128,7 @@ void loop() {
       motorTurn(0);
     }
   }
-  
+  */
 
   //find required correction and set each wheel speed
   correction = error * TURN_GAIN;
@@ -136,6 +143,17 @@ void loop() {
   //yeah, i drive
   motorDrive(rightSpeed, leftSpeed);
 }
+
+// the loop2 function also runs forver but as a parallel task
+void loop2 (void* pvParameters) {
+  while (1) {
+  Serial.print("Distance:");
+  Serial.print(" ");
+  Serial.print(DistanceValue);
+  Serial.println("");
+  }
+}
+
 
 /*
 ----
