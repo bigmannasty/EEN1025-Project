@@ -17,7 +17,7 @@ const int WHITE_THRESHOLD = 500;
 //Fastest speed and turn_gain mobot can have before errors
 const int speedL = 242;
 const int speedR = 255;
-const int TURN_GAIN = 75;
+const int TURN_GAIN = 110;
 
 void setup() {
   Serial.begin(9600);
@@ -74,6 +74,7 @@ bool nodeDetected = false;
 void loop() {
 
   
+  /*
   //check distance sensor
   DistanceValue = analogRead(distAnalogPin);
   Serial.print("Distance:");
@@ -89,6 +90,7 @@ void loop() {
     }
   }
   
+  */
 
   //intialise error and line detect vars
   int error = 0;
@@ -106,6 +108,7 @@ void loop() {
   }
 
   if (activeSensors >= 4) nodeDetected = true; //checking for node
+  //if (activeSensors >= 4) nodeDetected = true; //checking for node
 
   motorDir(0); //set motor direction to forward
 
@@ -124,7 +127,6 @@ void loop() {
       motorTurn(0);
     }
   }
-
   
 
   //find required correction and set each wheel speed
