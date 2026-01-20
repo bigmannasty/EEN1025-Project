@@ -73,8 +73,6 @@ bool nodeDetected = false;
 
 void loop() {
 
-  
-  /*
   //check distance sensor
   DistanceValue = analogRead(distAnalogPin);
   Serial.print("Distance:");
@@ -89,8 +87,6 @@ void loop() {
       if (DistanceValue < 2000) obstacleDetected = false;
     }
   }
-  
-  */
 
   //intialise error and line detect vars
   int error = 0;
@@ -108,10 +104,8 @@ void loop() {
   }
 
   if (activeSensors >= 4) nodeDetected = true; //checking for node
-  //if (activeSensors >= 4) nodeDetected = true; //checking for node
 
   motorDir(0); //set motor direction to forward
-
 
   //turn-around on node loop
   if (nodeDetected = true) {
