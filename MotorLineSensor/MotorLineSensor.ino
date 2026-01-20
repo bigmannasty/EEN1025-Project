@@ -3,7 +3,7 @@ int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
 
 //initialise the distance sensor values
 int DistanceValue = 0;
-int AnalogPin = 16;
+int distAnalogPin = 16;
 
 //Initialisation of pins to control motor
 int motor1PWM = 37;
@@ -16,8 +16,8 @@ const int WHITE_THRESHOLD = 500;
 
 //Fastest speed and turn_gain mobot can have before errors
 //Alternative BASE_SPEED is 125 with TURN_GAIN = 35
-const int BASE_SPEED = 255;
-const int TURN_GAIN = 100;
+const int BASE_SPEED = 225;
+const int TURN_GAIN = 75;
 
 void setup() {
   Serial.begin(9600);
@@ -64,12 +64,6 @@ void motorTurn(int dir) {
   motorDrive(100,100);
 }
 
-bool lineDetection() {
-
-  
-  return lineDetected;
-}
-
 
 int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
 int correction; // corection var
@@ -80,12 +74,20 @@ bool nodeDetected = false;
 
 void loop() {
 
+  
   //check distance sensor
-  DistanceValue = analogRead(AnalogPin);
-  if (DistanceValue >= 2500) {
+  DistanceValue = analogRead(distAnalogPin);
+  Serial.print("Distance:");
+  Serial.print(" ");
+  Serial.print(DistanceValue);
+  Serial.println("");
+  if (DistanceValue >= 1000) {
     motorDrive(0,0);
     obstacleDetected = true;
-    break;
+    while (obstacleDetected) {
+      DistanceValue = analogRead(distAnalogPin);
+      if (DistanceValue < 2000) obstacleDetected = false;
+    }
   }
   
 
@@ -108,8 +110,9 @@ void loop() {
 
   motorDir(0); //set motor direction to forward
 
+
   //turn-around on node loop
-  if (nodeDetected = true;) {
+  if (nodeDetected = true) {
     motorDrive(100,100);//move forward a bit before turn
     delay(50);
     motorTurn(0);
