@@ -1,6 +1,10 @@
 int AnalogValue[5]; //intialise 0s
 int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
 
+//initialise the distance sensor values
+int DistanceValue = 0;
+int AnalogPin = 16;
+
 //Initialisation of pins to control motor
 int motor1PWM = 37;
 int motor1Phase = 38;
@@ -47,23 +51,71 @@ void motorDir(int dir) {
 
 }
 
+//dir:0 cw, 1 anti-cw
+void motorTurn(int dir) { 
+  if (dir == 0){
+    digitalWrite(motor1Phase, HIGH);
+    digitalWrite(motor2Phase, HIGH);
+  }
+  else {
+    digitalWrite(motor1Phase, LOW);
+    digitalWrite(motor2Phase, LOW);
+  }
+  motorDrive(100,100);
+}
+
+bool lineDetection() {
+
+  
+  return lineDetected;
+}
+
 
 int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
 int correction; // corection var
+bool obstacleDetected; //distance sense boolean
+int activeSensors; //var for detecting nodes
+bool nodeDetected = false;
 
 
 void loop() {
 
+  //check distance sensor
+  DistanceValue = analogRead(AnalogPin);
+  if (DistanceValue >= 2500) {
+    motorDrive(0,0);
+    obstacleDetected = true;
+    break;
+  }
+  
+
   //intialise error and line detect vars
   int error = 0;
   bool lineDetected = false;
+  activeSensors = 0;
 
   //Code will retrieve sensor values continuously
   for (int i = 0; i < 5; i++) {
     AnalogValue[i] = analogRead(AnalogPin[i]);
   if (AnalogValue[i] <= WHITE_THRESHOLD) {
       error += weights[i];
+      activeSensors++;
       if (i == 2) {lineDetected = true;}
+    }
+  }
+
+  if (activeSensors >= 4) nodeDetected = true; //checking for node
+
+  //turn-around on node loop
+  if (nodeDetected = true;) {
+    motorTurn(0);
+    delay(500);
+    lineDetected = false;
+    //while mid sensor isnt on line, keep on turnin
+    while (!lineDetected) {
+      int midSensor = analogRead(AnalogPin[2]);
+      if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
+      motorTurn(0);
     }
   }
 
