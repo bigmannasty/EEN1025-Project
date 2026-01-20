@@ -15,8 +15,8 @@ int motor2Phase = 20;
 const int WHITE_THRESHOLD = 500;
 
 //Fastest speed and turn_gain mobot can have before errors
-//Alternative BASE_SPEED is 125 with TURN_GAIN = 35
-const int BASE_SPEED = 225;
+const int speedL = 242;
+const int speedR = 255;
 const int TURN_GAIN = 75;
 
 void setup() {
@@ -129,8 +129,8 @@ void loop() {
 
   //find required correction and set each wheel speed
   correction = error * TURN_GAIN;
-  int leftSpeed = BASE_SPEED;
-  int rightSpeed = BASE_SPEED;
+  int leftSpeed = speedL;
+  int rightSpeed = speedR;
 
   if (!lineDetected) {
     leftSpeed += correction;
