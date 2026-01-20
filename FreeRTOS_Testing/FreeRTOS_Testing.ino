@@ -1,6 +1,8 @@
 /*
 NOTES:
-This code runs 
+
+1. Core 0 runs WiFI and BLE, use Core 1 for more heavy tasks
+
 */
 
 
@@ -24,7 +26,7 @@ void setup() {
     NULL,      // Task input parameter
     0,         // Priority of the task
     NULL,      // Task handle.
-    0          // Core where the task should run
+    1          // Core where the task should run
   );
 }
 
