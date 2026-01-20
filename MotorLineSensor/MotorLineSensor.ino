@@ -106,8 +106,12 @@ void loop() {
 
   if (activeSensors >= 4) nodeDetected = true; //checking for node
 
+  motorDir(0); //set motor direction to forward
+
   //turn-around on node loop
   if (nodeDetected = true;) {
+    motorDrive(100,100);//move forward a bit before turn
+    delay(50);
     motorTurn(0);
     delay(500);
     lineDetected = false;
@@ -119,7 +123,7 @@ void loop() {
     }
   }
 
-  motorDir(0); //set motor direction to forward
+  
 
   //find required correction and set each wheel speed
   correction = error * TURN_GAIN;
