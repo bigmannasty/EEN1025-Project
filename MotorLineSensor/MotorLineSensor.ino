@@ -1,8 +1,8 @@
 #include <WiFi.h>
 
 //WiFi Details
-char ssid[] = "IOT";
-char password[] = "needlings84wheezily";
+char ssid[] = "Zygi Gricius";
+char password[] = "ManDig5Three";
 WiFiClient client;
 
 int AnalogValue[5]; //intialise 0s
