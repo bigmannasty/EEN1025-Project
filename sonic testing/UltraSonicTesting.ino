@@ -1,0 +1,37 @@
+const int trigPin = 17;   // GPIO15
+const int echoPin = 16;   // GPIO16
+
+unsigned long duration;
+float distanceCm;
+
+void setup() {
+  Serial.begin(9600);
+  piniwitz:
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  digitalWrite(trigPin, LOW);
+}
+
+void loop() {
+  // trigger pulse
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // read echo pulse width (timeout to prevent lockup)
+  duration = pulseIn(echoPin, HIGH, 30000); // 30ms ~ 5m max
+
+  if (duration == 0) {
+    Serial.println("Out of range / no echo");
+  } else {
+    // distance = (duration * speed_of_sound) / 2
+    distanceCm = (duration * 0.0343f) / 2.0f;
+    Serial.print("Distance: ");
+    Serial.print(distanceCm, 1);
+    Serial.println(" cm");
+  }
+
+  delay(200);
+}
