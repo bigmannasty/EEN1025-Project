@@ -1,4 +1,4 @@
-const int trigPin = 15;   // GPIO15
+const int trigPin = 17;   // GPIO15
 const int echoPin = 16;   // GPIO16
 
 unsigned long duration;
