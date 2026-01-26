@@ -153,25 +153,3 @@ void loop2 (void* pvParameters) {
   Serial.println("");
   }
 }
-
-
-/*
-----
-Notes:
-Black >= 2600
-White <= 500
-Sensors range from 200 to 4095 typically
-
-----
-Operation:
-1. Vehicle will not run until it detects the white line in the middle.
-
-2. When middle sensor is below 300, vehicle will begin detecting line and moving forward.
-  2a. Vehicle should automatically adjust angle so it is driving as parallel to white line as possible.
-
-3. When a turn is detected, vehicle needs to change PWM to change angle according to white line.
-  3a. If left turn detected, right wheel needs to slow down and vice versa.
-  3b. This could be done with an error variable, if larger than 0, we need to turn right and if less than 0, we need to turn left.
-
-----
-*/
