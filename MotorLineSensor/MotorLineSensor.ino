@@ -5,6 +5,9 @@ char ssid[] = "Zygi Gricius";
 char password[] = "ManDig5Three";
 WiFiClient client;
 
+char server[] = "3.250.38.184";
+int port = 8000;
+
 int AnalogValue[5]; //intialise 0s
 int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
 
@@ -40,8 +43,7 @@ int activeSensors;
 
 bool nodeDetected = false;
 
-
-//function to drive each motor at controlled pwm
+//drive each motor at controlled pwm
 void motorDrive(int leftPWM, int rightPWM) {
   leftPWM = constrain(leftPWM, 0, 255);
   rightPWM = constrain(rightPWM, 0, 255);
@@ -50,7 +52,8 @@ void motorDrive(int leftPWM, int rightPWM) {
   analogWrite(motor2PWM, rightPWM);
 }
 
-//function to set direction of motors
+//set direction of motors
+//dir:0 cw, 1 anti-cw
 void motorDir(int dir) {
   if (dir == 0){
     digitalWrite(motor1Phase, LOW);
@@ -63,7 +66,6 @@ void motorDir(int dir) {
 
 }
 
-//dir:0 cw, 1 anti-cw
 void motorTurn(int dir) { 
   if (dir == 0){
     digitalWrite(motor1Phase, HIGH);
@@ -100,6 +102,17 @@ void connectToWiFi() {
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 }
+
+bool connect() {
+  if(!client.connect(server, port)){
+    Serial.println("Error connecting to Server...");
+    return false;
+  }
+  else{
+    return true;
+  }
+}
+
 
 void setup() {
   Serial.begin(9600);
@@ -172,24 +185,3 @@ void loop() {
   //yeah, i drive
   motorDrive(rightSpeed, leftSpeed);
 }
-
-/*
-----
-Notes:
-Black >= 2600
-White <= 500
-Sensors range from 200 to 4095 typically
-
-----
-Operation:
-1. Vehicle will not run until it detects the white line in the middle.
-
-2. When middle sensor is below 300, vehicle will begin detecting line and moving forward.
-  2a. Vehicle should automatically adjust angle so it is driving as parallel to white line as possible.
-
-3. When a turn is detected, vehicle needs to change PWM to change angle according to white line.
-  3a. If left turn detected, right wheel needs to slow down and vice versa.
-  3b. This could be done with an error variable, if larger than 0, we need to turn right and if less than 0, we need to turn left.
-
-----
-*/
