@@ -1,53 +1,32 @@
+/*
+NOTES:
+
+for sensor calibration, we can use serial plotter and find the high and low ranges of sensors, letting us calibrate them!
+*/
+
 #include <WiFi.h>
-
-//WiFi Details
-char ssid[] = "Zygi Gricius";
-char password[] = "ManDig5Three";
-WiFiClient client;
-
-char server[] = "3.250.38.184";
-int port = 8000;
-
-int AnalogValue[5]; //intialise 0s
-int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
-
-//initialise the distance sensor values
-int DistanceValue = 0;
-int distAnalogPin = 16;
+// set up the weightings for each sensor
+const int weights[5] = { -2, -1, 0, 1, 2 };
 
 //Initialisation of pins to control motor
-int motor1PWM = 37;
-int motor1Phase = 38;
-int motor2PWM = 39;
-int motor2Phase = 20;
+const int motor1PWM = 37;
+const int motor1Phase = 38;
+const int motor2PWM = 39;
+const int motor2Phase = 20;
 
-//intitialise threshold, base motor speed, and turn gain
-const int WHITE_THRESHOLD = 500;
-
-//Fastest speed and turn_gain mobot can have before errors
-const int speedR = 255;
-const int speedL = int(speedR * 0.95);
-const int TURN_GAIN = 110;
-
-// set up the weightings for each sensor
-int weights[5] = {-2, -1, 0, 1, 2}; 
-
-// corection var
-int correction; 
-
-//distance sense boolean
-bool obstacleDetected;
-
-//var for detecting nodes
-int activeSensors; 
-
-bool nodeDetected = false;
+// Wheel initialisation
+void initMotor() {
+  pinMode(motor1PWM, OUTPUT);
+  pinMode(motor1Phase, OUTPUT);
+  pinMode(motor2PWM, OUTPUT);
+  pinMode(motor2Phase, OUTPUT);
+}
 
 //drive each motor at controlled pwm
 void motorDrive(int leftPWM, int rightPWM) {
   leftPWM = constrain(leftPWM, 0, 255);
   rightPWM = constrain(rightPWM, 0, 255);
-  
+
   analogWrite(motor1PWM, leftPWM);
   analogWrite(motor2PWM, rightPWM);
 }
@@ -55,28 +34,89 @@ void motorDrive(int leftPWM, int rightPWM) {
 //set direction of motors
 //dir:0 cw, 1 anti-cw
 void motorDir(int dir) {
-  if (dir == 0){
+  if (dir == 0) {
     digitalWrite(motor1Phase, LOW);
     digitalWrite(motor2Phase, HIGH);
-  }
-  else {
+  } else {
     digitalWrite(motor1Phase, HIGH);
     digitalWrite(motor2Phase, LOW);
   }
-
 }
 
-void motorTurn(int dir) { 
-  if (dir == 0){
+void motorTurn(int dir) {
+  if (dir == 0) {
     digitalWrite(motor1Phase, HIGH);
     digitalWrite(motor2Phase, HIGH);
-  }
-  else {
+  } else {
     digitalWrite(motor1Phase, LOW);
     digitalWrite(motor2Phase, LOW);
   }
-  motorDrive(100,100);
+  motorDrive(100, 100);
 }
+
+//initialise the distance sensor values
+const int distAnalogPin = 16;
+//check distance sensor & stop motor if too close to object
+void distanceSense() {
+  int DistanceValue = analogRead(distAnalogPin);
+  if (DistanceValue >= 1000) {
+    motorDrive(0, 0);
+    bool obstacleDetected = true;
+    while (obstacleDetected) {
+      DistanceValue = analogRead(distAnalogPin);
+      if (DistanceValue < 2000) obstacleDetected = false;
+    }
+  }
+}
+
+//Initialises 0s for LineSensorValues
+int lineValue[5];
+
+const int lineSensePin[5] = { 4, 5, 6, 7, 15 };
+const int WHITE_THRESHOLD = 500;
+void lineSense(int *error, int *activeSensors) {
+  //intialise error and line detect vars
+  *error = 0;
+  *activeSensors = 0;
+
+  //Code will retrieve sensor values continuously
+  for (int i = 0; i < 5; i++) {
+    lineValue[i] = analogRead(lineSensePin[i]);
+    if (lineValue[i] <= WHITE_THRESHOLD) {
+      *error += weights[i];
+      *activeSensors++;
+    }
+  }
+}
+
+bool middleLine() {
+  if (lineValue[2] <= WHITE_THRESHOLD) {
+    return true;
+  } else return false;
+}
+
+
+void nodeDetected(int activeSensors) {
+  //checking for node, turning around if true
+  if (activeSensors >= 4) {
+    //move forward a bit before turn
+    motorDrive(100, 100);
+    delay(50);
+    motorTurn(0);
+    delay(500);
+    bool lineDetected = false;
+    //while mid sensor isnt on line, keep on turnin
+    while (!lineDetected) {
+      motorTurn(0);
+      lineDetected = middleLine();
+    }
+  }
+}
+
+//WiFi Details
+const char ssid[] = "Zygi Gricius";
+const char password[] = "ManDig5Three";
+WiFiClient client;
 
 void connectToWiFi() {
   Serial.print("Connecting to Network: ");
@@ -103,12 +143,16 @@ void connectToWiFi() {
   Serial.println(WiFi.localIP());
 }
 
+//Server details
+const char server[] = "3.250.38.184";
+const int port = 8000;
+
+//Attempt to connect to server
 bool connect() {
-  if(!client.connect(server, port)){
+  if (!client.connect(server, port)) {
     Serial.println("Error connecting to Server...");
     return false;
-  }
-  else{
+  } else {
     return true;
   }
 }
@@ -117,63 +161,39 @@ bool connect() {
 void setup() {
   Serial.begin(9600);
   connectToWiFi();
-  // Wheel initialisation
-  pinMode(motor1PWM, OUTPUT);
-  pinMode(motor1Phase, OUTPUT);
-  pinMode(motor2PWM, OUTPUT);
-  pinMode(motor2Phase, OUTPUT);
+  connect();
+  initMotor();
 }
 
+//Fastest speed and turn_gain mobot can have before errors
+const int speedR = 255;
+const int speedL = int(speedR * 0.95);
+const int TURN_GAIN = 110;
 void loop() {
 
-  //check distance sensor
-  DistanceValue = analogRead(distAnalogPin);
-  if (DistanceValue >= 1000) {
-    motorDrive(0,0);
-    obstacleDetected = true;
-    while (obstacleDetected) {
-      DistanceValue = analogRead(distAnalogPin);
-      if (DistanceValue < 2000) obstacleDetected = false;
-    }
+  distanceSense();
+
+  bool lineDetected = middleLine();
+
+  //Using pointers, we can change values of error and activeSensors within lineSense function
+  int error;
+  int activeSensors;
+  lineSense(&error, &activeSensors);
+
+  //If less than half of sensor detecting a line, stop mobot and keep checking for line
+  while (activeSensors <= 2){
+    motorDrive(0, 0);
+    lineSense(&error, &activeSensors);
   }
 
-  //intialise error and line detect vars
-  int error = 0;
-  bool lineDetected = false;
-  activeSensors = 0;
+  //set motor direction to forward
+  motorDir(0);
 
-  //Code will retrieve sensor values continuously
-  for (int i = 0; i < 5; i++) {
-    AnalogValue[i] = analogRead(AnalogPin[i]);
-  if (AnalogValue[i] <= WHITE_THRESHOLD) {
-      error += weights[i];
-      activeSensors++;
-      if (i == 2) {lineDetected = true;}
-    }
-  }
-
-  if (activeSensors >= 4) nodeDetected = true; //checking for node
-
-  motorDir(0); //set motor direction to forward
-
-  //turn-around on node loop
-  if (nodeDetected = true) {
-    motorDrive(100,100);//move forward a bit before turn
-    delay(50);
-    motorTurn(0);
-    delay(500);
-    lineDetected = false;
-    //while mid sensor isnt on line, keep on turnin
-    while (!lineDetected) {
-      int midSensor = analogRead(AnalogPin[2]);
-      if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
-      motorTurn(0);
-    }
-  }
-  
+  //If node is detected, will perform U-turn
+  nodeDetected(activeSensors);
 
   //find required correction and set each wheel speed
-  correction = error * TURN_GAIN;
+  int correction = error * TURN_GAIN;
   int leftSpeed = speedL;
   int rightSpeed = speedR;
 
