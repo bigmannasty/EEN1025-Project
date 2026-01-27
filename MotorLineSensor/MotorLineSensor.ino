@@ -1,9 +1,19 @@
 int AnalogValue[5]; //intialise 0s
 int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
 
-//initialise the distance sensor values
+
+//sonar distance sensor vars
+const int trigPin = 17;   // GPIO15
+const int echoPin = 16;   // GPIO16
+unsigned long duration;
+float distanceCm;
+
+
+/*
+//initialise the optical distance sensor values
 int DistanceValue = 0;
 int distAnalogPin = 16;
+*/
 
 //Initialisation of pins to control motor
 int motor1PWM = 37;
@@ -22,11 +32,16 @@ const int TURN_GAIN = 110;
 void setup() {
   Serial.begin(9600);
 
-  // Wheel initialisation
+  // Wheel pin initialisation
   pinMode(motor1PWM, OUTPUT);
   pinMode(motor1Phase, OUTPUT);
   pinMode(motor2PWM, OUTPUT);
   pinMode(motor2Phase, OUTPUT);
+
+  //sonar sensor pin initialisation
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  digitalWrite(trigPin, LOW);
 }
 
 //function to drive each motor at controlled pwm
@@ -64,6 +79,17 @@ void motorTurn(int dir) {
   motorDrive(100,100);
 }
 
+
+void sonicSensorTrig() {
+  // trigger pulse
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+}
+
 int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
 int correction; // corection var
 bool obstacleDetected; //distance sense boolean
@@ -73,6 +99,7 @@ bool nodeDetected = false;
 
 void loop() {
 
+  /*
   //check distance sensor
   DistanceValue = analogRead(distAnalogPin);
   Serial.print("Distance:");
@@ -87,12 +114,63 @@ void loop() {
       if (DistanceValue < 2000) obstacleDetected = false;
     }
   }
+  */
+
+  motorDir(0); //set motor direction to forward
+
+
+  sonicSensorTrig();
+  // read echo pulse width (timeout to prevent lockup)
+  duration = pulseIn(echoPin, HIGH, 30000); // 30ms ~ 5m max
+  //if (duration != 0) { distanceCm = (duration * 0.0343f) / 2.0f; }
+
+    
+  Serial.print("Duration: ");
+  Serial.print(duration, 1);
+  Serial.println(" ");
+
+
+  /*
+
+  if (duration <= 600) {
+    motorDrive(0,0);
+    obstacleDetected = true;
+    while (obstacleDetected) {
+      motorDrive(0,0);
+      sonicSensorTrig();
+      duration = pulseIn(echoPin, HIGH, 30000);
+      if (duration != 0) { distanceCm = (duration * 0.0343f) / 2.0f; }
+      Serial.print("Duration: ");
+      Serial.print(duration, 1);
+      Serial.println(" ");
+      if (duration > 800) { obstacleDetected = false; }
+      delay(200);
+    }
+  }
+  //}
+
+  */
+
+  if (duration <= 600 && duration > 10) {
+    motorDrive(0,0);
+    obstacleDetected = true;
+    Serial.print("Duration: ");
+    Serial.print(duration, 1);
+    Serial.println(" ");
+    
+  }
+
+  if (duration > 800) { obstacleDetected = false; }
+
+
+  
 
   //intialise error and line detect vars
   int error = 0;
   bool lineDetected = false;
   activeSensors = 0;
 
+/*
   //Code will retrieve sensor values continuously
   for (int i = 0; i < 5; i++) {
     AnalogValue[i] = analogRead(AnalogPin[i]);
@@ -104,9 +182,9 @@ void loop() {
   }
 
   if (activeSensors >= 4) nodeDetected = true; //checking for node
-
-  motorDir(0); //set motor direction to forward
-
+*/
+  
+/*
   //turn-around on node loop
   if (nodeDetected = true) {
     motorDrive(100,100);//move forward a bit before turn
@@ -121,6 +199,7 @@ void loop() {
       motorTurn(0);
     }
   }
+  */
   
 
   //find required correction and set each wheel speed
@@ -134,7 +213,9 @@ void loop() {
   }
 
   //yeah, i drive
-  motorDrive(rightSpeed, leftSpeed);
+  if (!obstacleDetected) {
+    motorDrive(rightSpeed, leftSpeed);
+  }
 }
 
 /*
