@@ -1,209 +1,628 @@
-int AnalogValue[5]; //intialise 0s
-int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
-
-
-//sonar distance sensor vars
-const int trigPin = 17;   // GPIO15
-const int echoPin = 16;   // GPIO16
-unsigned long duration;
-float distanceCm;
-
-
 /*
-//initialise the optical distance sensor values
-int DistanceValue = 0;
-int distAnalogPin = 16;
+NOTES:
+
+for sensor calibration, we can use serial plotter and find the high and low ranges of sensors, letting us calibrate them!
 */
 
-//Initialisation of pins to control motor
-int motor1PWM = 37;
-int motor1Phase = 38;
-int motor2PWM = 39;
-int motor2Phase = 20;
+#include <WiFi.h>
+// set up the weightings for each sensor
+const int weights[5] = { -3, -1, 0, 1, 3 };
 
-//intitialise threshold, base motor speed, and turn gain
-const int WHITE_THRESHOLD = 500;
+//Initialisation of pins to control motor
+const int motor1PWM = 37;
+const int motor1Phase = 38;
+const int motor2PWM = 39;
+const int motor2Phase = 20;
+
+// Added these global variables
+String route = "";  // <--- ADDED: Store the route received from GET
+int routeList[] = {0,0,0,0,0};
+int position = 0;  // <--- ADDED: Track current position index
+bool routeCompleted = false;  // <--- ADDED: Flag for route completion
+
+
+//node and wight arrays
+int nodes[][5] = {{0, 1, 1, 0, 1}, {1, 0, 1, 1, 1}, {1, 1, 0, 1, 0}, {0, 1, 1, 0, 1}, {1, 1, 0, 1, 0}};
+int nodeWeights[][5] = {{9, 2, 2, 9, 1}, {2, 9, 2, 4, 4}, {2, 2, 9, 1, 9}, {9, 4, 1, 9, 5}, {1, 4, 9, 5, 9}};
+
+
+
+int weightRankTotal[] = {9, 9, 9}; //weight of each midpoint for the mobot to take
+int routeRank[] = {-1, -1, -1}; //rank of the midpoints for the mobot to take next on the route
+int currentNodeRank = 0; //current index of the node rank array
+int currentRouteNodeIndex = 0; //index of the node the mobot is at in the overall route
+int currentWeightTotal = 0;
+bool routeClear = false;
+
+int startPos = -1;
+int nextPos = 0;
+
 
 //Fastest speed and turn_gain mobot can have before errors
-const int speedL = 242;
 const int speedR = 255;
+const int speedL = int(speedR * 0.95);
 const int TURN_GAIN = 110;
 
-void setup() {
-  Serial.begin(9600);
+int currentDir = 0; // 0 CW    1 ACW
 
-  // Wheel pin initialisation
+bool obstacleDetected = true;
+
+
+//Initialises 0s for LineSensorValues
+int lineValue[5];
+const int lineSensePin[5] = { 4, 5, 6, 7, 15 };
+const int WHITE_THRESHOLD = 500;
+
+
+
+
+// Wheel initialisation
+void initMotor() {
   pinMode(motor1PWM, OUTPUT);
   pinMode(motor1Phase, OUTPUT);
   pinMode(motor2PWM, OUTPUT);
   pinMode(motor2Phase, OUTPUT);
-
-  //sonar sensor pin initialisation
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  digitalWrite(trigPin, LOW);
 }
 
-//function to drive each motor at controlled pwm
+//drive each motor at controlled pwm
 void motorDrive(int leftPWM, int rightPWM) {
   leftPWM = constrain(leftPWM, 0, 255);
   rightPWM = constrain(rightPWM, 0, 255);
-  
+
   analogWrite(motor1PWM, leftPWM);
   analogWrite(motor2PWM, rightPWM);
 }
 
-//function to set direction of motors
-void motorDir(int dir) {
-  if (dir == 0){
-    digitalWrite(motor1Phase, LOW);
-    digitalWrite(motor2Phase, HIGH);
-  }
-  else {
-    digitalWrite(motor1Phase, HIGH);
-    digitalWrite(motor2Phase, LOW);
-  }
-
-}
-
+//set direction of motors
 //dir:0 cw, 1 anti-cw
-void motorTurn(int dir) { 
-  if (dir == 0){
+void motorDir(int dir) {
+  if (dir == 0) {
+    digitalWrite(motor1Phase, LOW);
+    digitalWrite(motor2Phase, HIGH);
+  } else {
+    digitalWrite(motor1Phase, HIGH);
+    digitalWrite(motor2Phase, LOW);
+  }
+}
+
+
+
+
+//0 right   1 left
+void motorTurn(int dir) {
+  //move forward a bit
+  motorDrive(200, 200);
+  delay(100);
+  motorDrive(0,0);
+  //set motor direction for turn
+  if (dir == 0) {
     digitalWrite(motor1Phase, HIGH);
     digitalWrite(motor2Phase, HIGH);
-  }
+  } 
+  
   else {
     digitalWrite(motor1Phase, LOW);
     digitalWrite(motor2Phase, LOW);
   }
-  motorDrive(100,100);
+  bool lineDetected = false;
+  //while mid sensor isnt on line, keep on turnin
+  motorDrive(200, 200);
+  while (!lineDetected) {
+    int midSensor = analogRead(lineSensePin[2]);
+    if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
+  }
+  motorDir(0);
 }
 
 
-void sonicSensorTrig() {
-  // trigger pulse
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-
-}
-
-int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
-int correction; // corection var
-bool obstacleDetected; //distance sense boolean
-int activeSensors; //var for detecting nodes
-bool nodeDetected = false;
 
 
-void loop() {
 
-  /*
-  //check distance sensor
-  DistanceValue = analogRead(distAnalogPin);
-  Serial.print("Distance:");
-  Serial.print(" ");
-  Serial.print(DistanceValue);
-  Serial.println("");
+
+
+//initialise the distance sensor values
+const int distAnalogPin = 16;
+//check distance sensor & stop motor if too close to object
+void distanceSense() {
+  int DistanceValue = analogRead(distAnalogPin);
   if (DistanceValue >= 1000) {
-    motorDrive(0,0);
+    motorDrive(0, 0);
     obstacleDetected = true;
     while (obstacleDetected) {
       DistanceValue = analogRead(distAnalogPin);
       if (DistanceValue < 2000) obstacleDetected = false;
     }
   }
-  */
-
-  motorDir(0); //set motor direction to forward
+}
 
 
-  sonicSensorTrig();
-  // read echo pulse width (timeout to prevent lockup)
-  duration = pulseIn(echoPin, HIGH, 30000); // 30ms ~ 5m max
-  //if (duration != 0) { distanceCm = (duration * 0.0343f) / 2.0f; }
-
-    
-  Serial.print("Duration: ");
-  Serial.print(duration, 1);
-  Serial.println(" ");
 
 
-  /*
 
-  if (duration <= 600) {
-    motorDrive(0,0);
-    obstacleDetected = true;
-    while (obstacleDetected) {
-      motorDrive(0,0);
-      sonicSensorTrig();
-      duration = pulseIn(echoPin, HIGH, 30000);
-      if (duration != 0) { distanceCm = (duration * 0.0343f) / 2.0f; }
-      Serial.print("Duration: ");
-      Serial.print(duration, 1);
-      Serial.println(" ");
-      if (duration > 800) { obstacleDetected = false; }
-      delay(200);
+
+
+
+
+
+/*
+void lineSense(int *error, int *activeSensors) {
+  //intialise error and line detect vars
+  *error = 0;
+  *activeSensors = 0;
+
+  //Code will retrieve sensor values continuously
+  for (int i = 0; i < 5; i++) {
+    lineValue[i] = analogRead(lineSensePin[i]);
+    if (lineValue[i] <= WHITE_THRESHOLD) {
+      *error += weights[i];
+      *activeSensors++;
     }
   }
-  //}
+}
 
-  */
 
-  if (duration <= 600 && duration > 10) {
-    motorDrive(0,0);
-    obstacleDetected = true;
-    Serial.print("Duration: ");
-    Serial.print(duration, 1);
-    Serial.println(" ");
-    
+
+
+bool middleLine() {
+  if (lineValue[2] <= WHITE_THRESHOLD) {
+    return true;
+  } else return false;
+}
+*/
+
+
+
+
+
+
+
+
+
+void routeFind() {
+
+  int weightRankTotal[] = {9, 9, 9};
+  int routeRank[] = {-1, -1, -1};
+  int currentNodeRank = 0; 
+  bool routeClear = false;
+
+  if (nodes[startPos][nextPos] == 1) { //if there's a direct connection
+    bool routeClear = true;
+    //direct connections can be longer than other indirect connections, add code to check for this TODO LATER!!!!!!!!!!!!!!
   }
 
-  if (duration > 800) { obstacleDetected = false; }
+  if (nodes[startPos][nextPos] == 0) {
+    for (int i; i < 5; i++) {
+      if (nodes[startPos][i] == 1) { //if direct connection to index-node in the list check weighting and update
+
+        currentWeightTotal = nodeWeights[startPos][i]; //getting weight total for current midpoint
+        currentWeightTotal += nodeWeights[i][nextPos];
+
+        for (int j; j < 3; i++) {
+          
+          //update rank total
+          if (currentWeightTotal < weightRankTotal[j]) {
+            int temp = weightRankTotal[j];
+            weightRankTotal[j] = currentWeightTotal;
+            int rtemp = routeRank[j];
+            routeRank[j] = i;
+            
+
+            //if replacing rank 1, new temps and push the list down 2 positions
+            if (j == 0) {
+              int temp2 = weightRankTotal[1];
+              weightRankTotal[1] = temp;
+              weightRankTotal[2] = temp2;
+              int rtemp2 = routeRank[1];
+              routeRank[1] = rtemp;
+              routeRank[2] = rtemp2;
+            }
+
+            //if replacing rank 2, push the list down 1 position
+            else if (j == 1) {
+              weightRankTotal[2] = weightRankTotal[1];
+              weightRankTotal[1] = temp;
+              routeRank[2] = routeRank[1];
+              routeRank[1] = rtemp;
+            }
+          }
+        }
+      }
+    }
+    bool routeClear = true;
+  }
+}
+
+
+void updateNextPos() {
+  if (routeRank[currentNodeRank] != -1) { //if an indirect connection was made
+    nextPos = routeRank[currentNodeRank];
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+//WiFi Details
+const char ssid[] = "iot";
+const char password[] = "spraylike69untrimming";
+WiFiClient client;
+
+void connectToWiFi() {
+  Serial.print("Connecting to Network: ");
+  Serial.print(ssid);
+  Serial.flush();
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    Serial.flush();
+    delay(300);
+  }
+  Serial.println("Connected");
+  Serial.print("Obtaining IP address");
+  Serial.flush();
+
+  while (WiFi.localIP() == INADDR_NONE) {
+    Serial.print(".");
+    Serial.flush();
+    delay(300);
+  }
+  Serial.println();
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
+//Server details
+const char server[] = "3.250.38.184";
+const int port = 8000;
+
+//Attempt to connect to server
+bool connectToServer() {  // <--- CHANGED: Renamed for clarity
+  Serial.print("Connecting to server: ");  // <--- ADDED: Debug info
+  Serial.print(server);
+  Serial.print(":");
+  Serial.println(port);
+  
+  if (!client.connect(server, port)) {
+    Serial.println("Connection failed!");
+    return false;
+  }
+  
+  Serial.println("Connected to server!");  // <--- ADDED: Success message
+  return true;
+}
+
+
+
+
+
+
+// read buffer size for HTTP response
+#define BUFSIZE 512
+
+String readResponse() {
+  String response = "";
+  unsigned long timeout = millis();
+  
+  while (client.connected() && millis() - timeout < 5000) {  // <--- CHANGED: Timeout handling
+    while (client.available()) {
+      char c = client.read();
+      response += c;
+      timeout = millis();  // Reset timeout on data received
+    }
+  }
+  
+  return response;
+}
+
+
+
+
+
+
+int getStatusCode(String& response) {
+  String code = response.substring(9, 12);
+  return code.toInt();
+}
+
+String getResponseBody(String& response) {
+  int split = response.indexOf("\r\n\r\n");
+  String body = response.substring(split + 4, response.length());
+  body.trim();
+  return body;
+}
+
+
+
+
+
+
+// ADDED: Function to send GET request and get route
+bool getRoute() {
+  if (!connectToServer()) return false;
+  
+  Serial.println("Sending GET request for route...");
+  
+  // Send proper HTTP GET request
+  client.println("GET /api/getRoute/wjdn3008 HTTP/1.1");
+  client.println("Host: 3.250.38.184");  // <--- ADDED: Required HTTP header
+  client.println("Connection: close");  // <--- ADDED: Close connection after
+  client.println();  // End of headers
+  
+  delay(100);  // Give server time to respond
+  
+  // Read response
+  String response = readResponse();
+  int statusCode = getStatusCode(response);
+  
+  Serial.print("GET Response Status: ");
+  Serial.println(statusCode);
+  
+  if (statusCode == 200) {
+    route = getResponseBody(response);  // <--- Store route globally
+    int j = 0;
+    for (int i = 0; route[i] != '\0'; i++) {
+      if (route[i] != ',') {
+        routeList[j] += route[i];
+        j++;
+      }
+    }
+    Serial.print("Route received: ");
+    Serial.println(route);
+    client.stop();
+    return true;
+  } else {
+    Serial.println("Failed to get route");
+    client.stop();
+    return false;
+  }
+}
+
+
+
+
+
+
+
+// ADDED: Function to send POST request when arriving at node
+bool sendArrival(int position) {
+  if (!connectToServer()) return false;
+  
+  Serial.print("Sending POST for position: ");
+  Serial.println(position);
+  
+  // Prepare POST body
+  String postBody = "position=" + String(position);
+  
+  // Send HTTP POST request
+  client.println("POST /api/arrived/wjdn3008 HTTP/1.1");
+  client.println("Host: 3.250.38.184");  // <--- ADDED: Required header
+  client.println("Content-Type: application/x-www-form-urlencoded");
+  client.print("Content-Length: ");  // <--- FIXED: Proper Content-Length
+  client.println(postBody.length());
+  client.println("Connection: close");  // <--- ADDED: Close connection
+  client.println();  // End of headers
+  client.println(postBody);  // Send body
+  
+  delay(100);  // Give server time to respond
+  
+  // Read response
+  String response = readResponse();
+  int statusCode = getStatusCode(response);
+  
+  Serial.print("POST Response Status: ");
+  Serial.println(statusCode);
+  
+  if (statusCode == 200) {
+    String body = getResponseBody(response);
+    Serial.print("Server response: ");
+    Serial.println(body);
+    client.stop();
+    
+    // Check if finished
+    if (body.equals("Finished")) {
+      Serial.println("Route completed!");
+      return true;  // Finished
+    }
+    return false;  // Not finished
+  } else {
+    Serial.println("Failed to send arrival");
+    client.stop();
+    return false;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+void setup() {
+  Serial.begin(9600);
+  delay(500);  // <--- ADDED: Wait for Serial to initialize
+  
+
+  
+  //connectToWiFi();
+  
+  // Initialize motor
+  initMotor();
+  
+
+  /*
+  // Get route from server
+  while (!getRoute()) {  // <--- CHANGED: Call getRoute() function instead of raw HTTP
+    Serial.println("Retrying to get route in 3 seconds...");
+    delay(3000);
+  }
+  
+  // Assuming route is a comma-separated list of destinations
+  // e.g., "1,3,2,4"
+  // Parse the first destination
+  int firstComma = route.indexOf(',');
+  if (firstComma != -1) {
+    String firstPos = route.substring(0, firstComma);
+    nextPos = firstPos.toInt();
+  } else {
+    nextPos = route.toInt();
+  }
+  
+  Serial.print("First node: ");
+  Serial.println(nextPos);
+  */
+}
+
+
+
+
+bool nodeDetected = false;
+bool passedJunc = true;
+
+void loop() {
+
+  
+  //distanceSense();
+
+  bool lineDetected = false;
+
+  //Using pointers, we can change values of error and activeSensors within lineSense function
+
+  int error = 0;
+  int activeSensors = 0;
+
+  //lineSense(&error, &activeSensors);
+
+
+  //set motor direction to forward
+  motorDir(0);
 
 
   
+  
 
-  //intialise error and line detect vars
-  int error = 0;
-  bool lineDetected = false;
-  activeSensors = 0;
-
-/*
-  //Code will retrieve sensor values continuously
+  //checking for node, turning around if true
+  
   for (int i = 0; i < 5; i++) {
-    AnalogValue[i] = analogRead(AnalogPin[i]);
-  if (AnalogValue[i] <= WHITE_THRESHOLD) {
+    lineValue[i] = analogRead(lineSensePin[i]);
+  if (lineValue[i] <= WHITE_THRESHOLD) {
       error += weights[i];
       activeSensors++;
       if (i == 2) {lineDetected = true;}
     }
   }
 
-  if (activeSensors >= 4) nodeDetected = true; //checking for node
-*/
-  
+
+
+  if (activeSensors >= 4) nodeDetected = true; // check for node
+
+  if (nodeDetected == true) { // if reached a node
+
+    if (passedJunc == true) { // if node is not a junction
+      
+      if (nextPos == routeList[currentRouteNodeIndex]) { // if the node youre at right now is an actual route node
+        currentRouteNodeIndex++; // move onto the next routelist node
+        startPos = nextPos; // new start node becomes the last dest node
+        nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
+        routeFind(); // find the new route for the current start and next nodes
+        updateNextPos();
+        passedJunc = false;
+
+      }
+
+
+      if (nextPos != routeList[currentRouteNodeIndex]) { // if the node reached was a midpoint
+        startPos = nextPos; // reached node is new start
+        nextPos = routeList[currentRouteNodeIndex]; // nextpos becomes the original main destination node from the routelist
+        passedJunc = false; // reset junction var
+
+      }
+    }
+
+
+
+
+    if (passedJunc == false) { // if at a junction
+
+      if (currentDir == 0 && nextPos == 1) { // if going clockwise to node 1
+        //motorTurn(0); // turn right at the next junction
+      }
+
+      else if (currentDir == 1 && nextPos == 1) { // if going anti-clockwise to node 1
+        //motorTurn(1); // turn left at the next junction
+      }
+
+
+      if (startPos == 1 && (nextPos == 2 || nextPos == 4)) { // if going from node 1 to node 2 or 4
+        //motorTurn(1); // turn left at the next junction
+      }
+
+      else if (startPos == 1 && (nextPos == 0 || nextPos == 3)) { // if going from node 1 to node 0 or 3
+        //motorTurn(0); // turn righ at the next junction
+      }
+
+      passedJunc = true; // indicate that the junction has been passed
+
+    }
+
+
+  }
+
+
+
 /*
-  //turn-around on node loop
-  if (nodeDetected = true) {
-    motorDrive(100,100);//move forward a bit before turn
-    delay(50);
+  if (nodeDetected == true) {
+    motorDrive(0, 0);
+    if (currentDir == 0 && nextPos == 1) {
+      motorDrive(200, 200);
+      delay(50);
+      if (currentDir == 0) {
+        digitalWrite(motor1Phase, HIGH);
+        digitalWrite(motor2Phase, HIGH);
+      }
+      motorDrive(200, 200);
+      //move forward a bit before turn
+      bool lineDetected = false;
+      //while mid sensor isnt on line, keep on turnin
+      while (!lineDetected) {
+        int midSensor = analogRead(AnalogPin[2]);
+        if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
+      }
+    }
+    motorDir(0);
+  }
+  */
+
+
+
+  //turn-around at an obstacle
+  if (obstacleDetected == true) {
     motorTurn(0);
     delay(500);
     lineDetected = false;
     //while mid sensor isnt on line, keep on turnin
     while (!lineDetected) {
-      int midSensor = analogRead(AnalogPin[2]);
+      int midSensor = analogRead(lineSensePin[2]);
       if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
       motorTurn(0);
     }
   }
-  */
+  
   
 
   //find required correction and set each wheel speed
-  correction = error * TURN_GAIN;
+  int correction = error * TURN_GAIN;
   int leftSpeed = speedL;
   int rightSpeed = speedR;
 
@@ -213,28 +632,5 @@ void loop() {
   }
 
   //yeah, i drive
-  if (!obstacleDetected) {
-    motorDrive(rightSpeed, leftSpeed);
-  }
+  motorDrive(rightSpeed, leftSpeed);
 }
-
-/*
-----
-Notes:
-Black >= 2600
-White <= 500
-Sensors range from 200 to 4095 typically
-
-----
-Operation:
-1. Vehicle will not run until it detects the white line in the middle.
-
-2. When middle sensor is below 300, vehicle will begin detecting line and moving forward.
-  2a. Vehicle should automatically adjust angle so it is driving as parallel to white line as possible.
-
-3. When a turn is detected, vehicle needs to change PWM to change angle according to white line.
-  3a. If left turn detected, right wheel needs to slow down and vice versa.
-  3b. This could be done with an error variable, if larger than 0, we need to turn right and if less than 0, we need to turn left.
-
-----
-*/
