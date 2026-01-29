@@ -565,7 +565,6 @@ void loop() {
             }
           }
           if (activeSensors < 3) {nodeDetected = false;}
-          Serial.println("node loop");
         }
 
       }
