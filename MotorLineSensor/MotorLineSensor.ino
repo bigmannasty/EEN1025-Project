@@ -45,7 +45,7 @@ const int TURN_GAIN = 110;
 
 int currentDir = 0; // 0 CW    1 ACW
 
-bool obstacleDetected = true;
+bool obstacleDetected = false;
 
 
 //Initialises 0s for LineSensorValues
@@ -106,7 +106,7 @@ void motorTurn(int dir) {
   }
   bool lineDetected = false;
   //while mid sensor isnt on line, keep on turnin
-  motorDrive(200, 200);
+  motorDrive(100, 100);
   while (!lineDetected) {
     int midSensor = analogRead(lineSensePin[2]);
     if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
@@ -178,7 +178,7 @@ bool middleLine() {
 
 
 
-void routeFind() {
+bool routeFind() {
 
   int weightRankTotal[] = {9, 9, 9};
   int routeRank[] = {-1, -1, -1};
@@ -187,6 +187,7 @@ void routeFind() {
 
   if (nodes[startPos][nextPos] == 1) { //if there's a direct connection
     bool routeClear = true;
+    return true;
     //direct connections can be longer than other indirect connections, add code to check for this TODO LATER!!!!!!!!!!!!!!
   }
 
@@ -229,6 +230,7 @@ void routeFind() {
       }
     }
     bool routeClear = true;
+    return true;
   }
 }
 
@@ -370,7 +372,7 @@ bool getRoute() {
     int j = 0;
     for (int i = 0; route[i] != '\0'; i++) {
       if (route[i] != ',') {
-        routeList[j] += route[i];
+        routeList[j] += route[i] - 48;
         j++;
       }
     }
@@ -432,7 +434,9 @@ bool sendArrival(int position) {
       return true;  // Finished
     }
     return false;  // Not finished
-  } else {
+  } 
+  
+  else {
     Serial.println("Failed to send arrival");
     client.stop();
     return false;
@@ -455,13 +459,13 @@ void setup() {
   
 
   
-  //connectToWiFi();
+  connectToWiFi();
   
   // Initialize motor
   initMotor();
   
 
-  /*
+  
   // Get route from server
   while (!getRoute()) {  // <--- CHANGED: Call getRoute() function instead of raw HTTP
     Serial.println("Retrying to get route in 3 seconds...");
@@ -481,14 +485,15 @@ void setup() {
   
   Serial.print("First node: ");
   Serial.println(nextPos);
-  */
+  
 }
 
 
 
 
-bool nodeDetected = false;
+
 bool passedJunc = true;
+bool routeFinished = false;
 
 void loop() {
 
@@ -496,6 +501,7 @@ void loop() {
   //distanceSense();
 
   bool lineDetected = false;
+  bool nodeDetected = false;
 
   //Using pointers, we can change values of error and activeSensors within lineSense function
 
@@ -523,31 +529,58 @@ void loop() {
     }
   }
 
+  
 
+  /*
+  for (int i = 0; i < 5; i++) {
+    Serial.println("route");
+    Serial.println(routeList[i]);  
+
+  }
+  */
 
   if (activeSensors >= 4) nodeDetected = true; // check for node
 
   if (nodeDetected == true) { // if reached a node
 
     if (passedJunc == true) { // if node is not a junction
+
+      motorDrive(0,0);
       
       if (nextPos == routeList[currentRouteNodeIndex]) { // if the node youre at right now is an actual route node
         currentRouteNodeIndex++; // move onto the next routelist node
+        routeFinished = sendArrival(nextPos);
         startPos = nextPos; // new start node becomes the last dest node
         nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
-        routeFind(); // find the new route for the current start and next nodes
-        updateNextPos();
+        //routeFind(); // find the new route for the current start and next nodes
+        //updateNextPos();
         passedJunc = false;
+        while (nodeDetected) { // while still on node 
+          activeSensors = 0;
+          for (int i = 0; i < 5; i++) {
+            lineValue[i] = analogRead(lineSensePin[i]);
+            if (lineValue[i] <= WHITE_THRESHOLD) {
+                error += weights[i];
+                activeSensors++;
+            }
+          }
+          if (activeSensors < 3) {nodeDetected = false;}
+          Serial.println("node loop");
+        }
 
       }
 
 
-      if (nextPos != routeList[currentRouteNodeIndex]) { // if the node reached was a midpoint
+      else if (nextPos != routeList[currentRouteNodeIndex]) { // if the node reached was a midpoint
         startPos = nextPos; // reached node is new start
         nextPos = routeList[currentRouteNodeIndex]; // nextpos becomes the original main destination node from the routelist
         passedJunc = false; // reset junction var
 
       }
+
+      if ( (startPos == 0 && nextPos == 4) || (startPos == 4 && nextPos == 0) ) { passedJunc = true; } // if starts at 0 and goes 4 or vice versa, next node is not junction
+      else if ( (startPos == 2 && nextPos == 3) || (startPos == 3 && nextPos == 2) ) { passedJunc = true; } // if starts at 2 and goes 3 or vice versa, next node is not junction
+
     }
 
 
@@ -556,20 +589,24 @@ void loop() {
     if (passedJunc == false) { // if at a junction
 
       if (currentDir == 0 && nextPos == 1) { // if going clockwise to node 1
-        //motorTurn(0); // turn right at the next junction
+        motorTurn(0); // turn right at the next junction
+        Serial.println("turn right");
       }
 
       else if (currentDir == 1 && nextPos == 1) { // if going anti-clockwise to node 1
-        //motorTurn(1); // turn left at the next junction
+        motorTurn(1); // turn left at the next junction
+        Serial.println("turn left");
       }
 
 
       if (startPos == 1 && (nextPos == 2 || nextPos == 4)) { // if going from node 1 to node 2 or 4
-        //motorTurn(1); // turn left at the next junction
+        motorTurn(1); // turn left at the next junction
+        Serial.println("turn left");
       }
 
       else if (startPos == 1 && (nextPos == 0 || nextPos == 3)) { // if going from node 1 to node 0 or 3
-        //motorTurn(0); // turn righ at the next junction
+        motorTurn(0); // turn righ at the next junction
+        Serial.println("turn right");
       }
 
       passedJunc = true; // indicate that the junction has been passed
