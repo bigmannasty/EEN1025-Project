@@ -10,9 +10,9 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   tone(buzzer, NOTE_C5);  //C
-  delay(300);
+  delay(250);
   tone(buzzer, NOTE_B5);  //B
-  delay(300);
+  delay(250);
   tone(buzzer, NOTE_C5);  //C
   delay(500);
   tone(buzzer, NOTE_G4);  //G
@@ -24,9 +24,9 @@ void loop() {
   delay(100);
 
   tone(buzzer, NOTE_C5);  //C
-  delay(300);
+  delay(250);
   tone(buzzer, NOTE_B5);  //B
-  delay(300);
+  delay(250);
   tone(buzzer, NOTE_C5);  //C
   delay(500);
   tone(buzzer, NOTE_G4);  //G
@@ -38,25 +38,27 @@ void loop() {
   delay(100);
 
   tone(buzzer, NOTE_C5);  //C
-  delay(500);
+  delay(250);
   tone(buzzer, NOTE_B5);  //B
-  delay(200);
+  delay(250);
   noTone(buzzer);
-  delay(100);
+  delay(50);
   tone(buzzer, NOTE_B5);  //B
-  delay(200);
+  delay(250);
   noTone(buzzer);
   delay(50);
   tone(buzzer, NOTE_C5);  //C
-  delay(500);
+  delay(750);
 
   noTone(buzzer);
   tone(buzzer, NOTE_G4);  //G
-  delay(750);
+  delay(500);
   tone(buzzer, NOTE_C4);  //low c
-  delay(750);
+  delay(500);
   tone(buzzer, NOTE_AS4);  //Bflat
-  delay(750);
+  delay(1250);
+  noTone(buzzer);
+  delay(500);
 
   noTone(buzzer);
 }
