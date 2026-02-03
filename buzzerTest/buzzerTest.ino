@@ -1,12 +1,8 @@
 #include "pitches.h"
 const int buzzer = 12;
 
-void setup() {
-  // put your setup code here, to run once:
-  pinMode(buzzer, OUTPUT);
-}
 
-void loop() {
+void theme() {
   // put your main code here, to run repeatedly:
 
   tone(buzzer, NOTE_C5);  //C
@@ -61,4 +57,47 @@ void loop() {
   delay(500);
 
   noTone(buzzer);
+
+}
+
+void buzz(int node) {
+
+  for (int i=0; i<node; i++)
+  {
+    delay(75);
+    tone(buzzer, NOTE_C4);
+    delay(75);
+    noTone(buzzer);
+  }
+}
+
+void obstacle() {
+
+  tone(buzzer, NOTE_C5);
+  delay(100);
+  tone(buzzer, NOTE_C4);
+  delay(100);
+  tone(buzzer, NOTE_D4);
+  delay(100);
+  noTone(buzzer);
+}
+
+void start() {
+
+  tone(buzzer, NOTE_D4);
+  delay(100);
+  tone(buzzer, NOTE_C4);
+  delay(100);
+  tone(buzzer, NOTE_C5);
+  delay(100);
+  noTone(buzzer);
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(buzzer, OUTPUT);
+  start();
+}
+
+void loop() {
 }
