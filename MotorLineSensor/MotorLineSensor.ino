@@ -1,10 +1,3 @@
-/*
-NOTES:
-
-for sensor calibration, we can use serial plotter and find the high and low ranges of sensors, letting us calibrate them!
-*/
-
-#include <WiFi.h>
 // set up the weightings for each sensor
 const int weights[5] = { -3, -1, 0, 1, 3 };
 
@@ -39,14 +32,17 @@ int nextPos = 0;
 
 
 //Fastest speed and turn_gain mobot can have before errors
-const int speedR = 255;
+const int speedR = 150;
 const int speedL = int(speedR * 0.95);
 const int TURN_GAIN = 110;
 
 int currentDir = 0; // 0 CW    1 ACW
 
 bool obstacleDetected = false;
-
+bool lineDetected = false;
+bool nodeDetected = false;
+int error = 0;
+int activeSensors = 0;
 
 //Initialises 0s for LineSensorValues
 int lineValue[5];
@@ -91,9 +87,18 @@ void motorDir(int dir) {
 //0 right   1 left
 void motorTurn(int dir) {
   //move forward a bit
-  motorDrive(100, 100);
-  delay(100);
-  motorDrive(0,0);
+  motorDrive(speedL, speedR);
+  while (nodeDetected) { // while still on node 
+    activeSensors = 0;
+    for (int i = 0; i < 5; i++) {
+      lineValue[i] = analogRead(lineSensePin[i]);
+      if (lineValue[i] <= WHITE_THRESHOLD) {
+          error += weights[i];
+          activeSensors++;
+      }
+    }
+    if (activeSensors < 3) {nodeDetected = false;}
+  }
   //set motor direction for turn
   if (dir == 0) {
     digitalWrite(motor1Phase, HIGH);
@@ -105,11 +110,12 @@ void motorTurn(int dir) {
     digitalWrite(motor2Phase, LOW);
   }
   //while mid sensor isnt on line, keep on turnin
-  motorDrive(100, 100);
+  motorDrive(speedL, speedR);
   while (lineDetected) {
     int midSensor = analogRead(lineSensePin[2]);
     if (midSensor > WHITE_THRESHOLD) lineDetected = false;
   }
+
   while (!lineDetected) {
     int midSensor = analogRead(lineSensePin[2]);
     if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
@@ -272,13 +278,13 @@ void loop() {
   
   //distanceSense();
 
-  bool lineDetected = false;
-  bool nodeDetected = false;
+  lineDetected = false;
+  nodeDetected = false;
 
   //Using pointers, we can change values of error and activeSensors within lineSense function
 
-  int error = 0;
-  int activeSensors = 0;
+  error = 0;
+  activeSensors = 0;
 
   //lineSense(&error, &activeSensors);
 
@@ -314,7 +320,7 @@ void loop() {
   if (activeSensors >= 4) nodeDetected = true; // check for node
 
   if (nodeDetected == true) {
-
+    motorTurn(0);
   }
 
 /*
