@@ -1,6 +1,15 @@
 int AnalogValue[5] = {0,0,0,0,0};
 int AnalogPin[5] = {4,5,6,7,15}; // keep 8 free for tone O/P music
 
+/*
+BEFORE:
+Brown   - pin 4   - row 1
+Red     - pin 5   - row 2
+Orange  - pin 6   - row 3
+Yellow  - pin 7   - row 4
+Green   - pin 15  - row 5
+*/
+
 void setup()
 {
 // put your setup code here, to run once:
