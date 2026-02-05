@@ -128,7 +128,8 @@ void loop() {
 /*
 TO DO:
 1. Displays START when beginning route
-  1a. Displays END when ending route and plays music from buzzer
+  1a. Displays PARK when ending route and plays music from buzzer
+  1b. Once parked, display END
 
 2. At each node, plays buzzer sound relating to node number
 */
