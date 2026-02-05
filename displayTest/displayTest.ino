@@ -5,12 +5,13 @@
 const short SCREEN_WIDTH = 128;
 const short SCREEN_HEIGHT = 64;
 #define OLED_ADDR 0x3C
-
 const short I2C_SDA = 8;
 const short I2C_SCL = 9;
-const short button = 1;
-short node = 0;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
+const short button = 1;
+
+short node = 0;
 const short route[] = {0, 1, 3, 2, 5};
 
 int buttonState = LOW;
@@ -18,9 +19,7 @@ int lastState = LOW;
 unsigned long lastDebounceTime = 0;
 unsigned long debounceDelay = 50;
 
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
-
+//Function to Draw arrow on display
 void drawArrow32x16(int x, int y) {
   const short width = 32;
   const short height = 16;
@@ -64,7 +63,7 @@ const short arrowY = 24;
 
 const short centre = 8;
 
-void scrollText(short route[],short node) {
+void updateUI(short route[],short node) {
   short scrollVertical = 8;
   display.setTextSize(7);
   display.setTextColor(SSD1306_WHITE);
@@ -113,6 +112,7 @@ void loop() {
           buttonState = reading;
       }
   }
+  /*
   if (node>3)
   {
     node = 0;
@@ -122,8 +122,9 @@ void loop() {
   if (lastState == HIGH)
   {
     node++;
-    scrollText(route, node);
+    updateUI(route, node);
   }
+  */
 }
 /*
 TO DO:
