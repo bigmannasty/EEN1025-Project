@@ -5,11 +5,11 @@ const int weights[5] = { -3, -1, 0, 1, 3 };
 const int motor1PWM = 37;
 const int motor1Phase = 38;
 const int motor2PWM = 39;
-const int motor2Phase = 20;
+const int motor2Phase = 40;
 
 // Added these global variables
 String route = "";  // <--- ADDED: Store the route received from GET
-int routeList[] = {0,0,0,0,0};
+int routeList[] = {0, 1, 3, 4, 5};
 int position = 0;  // <--- ADDED: Track current position index
 bool routeCompleted = false;  // <--- ADDED: Flag for route completion
 
@@ -17,6 +17,7 @@ bool routeCompleted = false;  // <--- ADDED: Flag for route completion
 //node and wight arrays
 int nodes[][5] = {{0, 1, 1, 0, 1}, {1, 0, 1, 1, 1}, {1, 1, 0, 1, 0}, {0, 1, 1, 0, 1}, {1, 1, 0, 1, 0}};
 int nodeWeights[][5] = {{9, 2, 2, 9, 1}, {2, 9, 2, 4, 4}, {2, 2, 9, 1, 9}, {9, 4, 1, 9, 5}, {1, 4, 9, 5, 9}};
+int nodeDirection[][5] = {{9, 1, 1, 9, 0}, {0, 9, 0, 1, 1}, {0, 0, 9, 1, 9}, {9, 1, 0, 9, 1}, {1, 0, 9, 0, 9}}; // 0 clockwise  1 anti clockwise
 
 
 
@@ -27,6 +28,7 @@ int currentRouteNodeIndex = 0; //index of the node the mobot is at in the overal
 int currentWeightTotal = 0;
 bool routeClear = false;
 
+
 int startPos = -1;
 int nextPos = 0;
 
@@ -34,20 +36,22 @@ int nextPos = 0;
 //Fastest speed and turn_gain mobot can have before errors
 const int speedR = 150;
 const int speedL = int(speedR * 0.95);
-const int TURN_GAIN = 110;
+const int TURN_GAIN = 75;
 
-int currentDir = 0; // 0 CW    1 ACW
+int currentDir = 1; // 0 CW    1 ACW
 
 bool obstacleDetected = false;
 bool lineDetected = false;
 bool nodeDetected = false;
 int error = 0;
 int activeSensors = 0;
+bool passedJunc = true;
+bool routeFinished = false;
 
 //Initialises 0s for LineSensorValues
 int lineValue[5];
 const int lineSensePin[5] = { 4, 5, 6, 7, 15 };
-const int WHITE_THRESHOLD = 500;
+const int WHITE_THRESHOLD = 700;
 
 
 
@@ -88,17 +92,20 @@ void motorDir(int dir) {
 void motorTurn(int dir) {
   //move forward a bit
   motorDrive(speedL, speedR);
+  delay(200);
+  /*
   while (nodeDetected) { // while still on node 
     activeSensors = 0;
     for (int i = 0; i < 5; i++) {
       lineValue[i] = analogRead(lineSensePin[i]);
       if (lineValue[i] <= WHITE_THRESHOLD) {
-          error += weights[i];
           activeSensors++;
       }
     }
     if (activeSensors < 3) {nodeDetected = false;}
   }
+  */
+  motorDrive(0, 0);
   //set motor direction for turn
   if (dir == 0) {
     digitalWrite(motor1Phase, HIGH);
@@ -125,6 +132,26 @@ void motorTurn(int dir) {
 }
 
 
+// function to do a 180 
+void motor180() {
+  motorDrive(100,100);//move forward a bit before turn
+  delay(50);
+  digitalWrite(motor1Phase, HIGH);
+  digitalWrite(motor2Phase, HIGH);
+  motorDrive(speedL, speedR);
+  delay(500);
+  lineDetected = false;
+  //while mid sensor isnt on line, keep on turnin
+  while (!lineDetected) {
+    int midSensor = analogRead(lineSensePin[2]);
+    if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
+  }
+  motorDrive(0, 0);
+  motorDir(0);
+  if (currentDir == 0) { currentDir = 1; } // flip direction
+  else { currentDir = 0; }
+}
+
 
 
 
@@ -149,51 +176,18 @@ void distanceSense() {
 
 
 
-
-
-
-
-
-/*
-void lineSense(int *error, int *activeSensors) {
-  //intialise error and line detect vars
-  *error = 0;
-  *activeSensors = 0;
-
-  //Code will retrieve sensor values continuously
-  for (int i = 0; i < 5; i++) {
-    lineValue[i] = analogRead(lineSensePin[i]);
-    if (lineValue[i] <= WHITE_THRESHOLD) {
-      *error += weights[i];
-      *activeSensors++;
-    }
-  }
-}
-
-
-
-
-bool middleLine() {
-  if (lineValue[2] <= WHITE_THRESHOLD) {
-    return true;
-  } else return false;
-}
-*/
-
-
-
-
-
-
-
-
-
 bool routeFind() {
 
   int weightRankTotal[] = {9, 9, 9};
   int routeRank[] = {-1, -1, -1};
   int currentNodeRank = 0; 
   bool routeClear = false;
+  //Serial.println("debug 1");
+
+  Serial.print("Start Pos: ");
+  Serial.println(startPos);
+  Serial.print("Next Pos: ");
+  Serial.println(nextPos);
 
   if (nodes[startPos][nextPos] == 1) { //if there's a direct connection
     bool routeClear = true;
@@ -202,13 +196,15 @@ bool routeFind() {
   }
 
   if (nodes[startPos][nextPos] == 0) {
-    for (int i; i < 5; i++) {
+    for (int i = 0; i < 5; i++) {
+      //Serial.println("debug 2");
       if (nodes[startPos][i] == 1) { //if direct connection to index-node in the list check weighting and update
 
         currentWeightTotal = nodeWeights[startPos][i]; //getting weight total for current midpoint
         currentWeightTotal += nodeWeights[i][nextPos];
 
-        for (int j; j < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          //Serial.println("debug 3");
           
           //update rank total
           if (currentWeightTotal < weightRankTotal[j]) {
@@ -239,7 +235,13 @@ bool routeFind() {
         }
       }
     }
-    bool routeClear = true;
+    Serial.print("Rank 1: ");
+    Serial.println(routeRank[0]);
+    Serial.print("Rank 2: ");
+    Serial.println(routeRank[1]);
+    Serial.print("Rank 3: ");
+    Serial.println(routeRank[2]);
+    routeClear = true;
     return true;
   }
 }
@@ -255,14 +257,21 @@ void updateNextPos() {
 
 
 
+
 void setup() {
   Serial.begin(9600);
-  delay(500);  // <--- ADDED: Wait for Serial to initialize
-    
+  //delay(500);  // Wait for Serial to initialize
+
+  Serial.println("");
+  Serial.println("");
+  Serial.println("");
+  
+  lineDetected = false;
   // Initialize motor
   initMotor();
-  
-  
+  motorDir(0);
+  motorDrive(speedL, speedR);
+  delay(100);
   
 }
 
@@ -270,15 +279,10 @@ void setup() {
 
 
 
-bool passedJunc = true;
-bool routeFinished = false;
-
 void loop() {
 
   
   //distanceSense();
-
-  lineDetected = false;
   nodeDetected = false;
 
   //Using pointers, we can change values of error and activeSensors within lineSense function
@@ -293,39 +297,47 @@ void loop() {
   motorDir(0);
 
 
-  
-  
-
   //checking for node, turning around if true
-  
+  lineDetected = false;
   for (int i = 0; i < 5; i++) {
     lineValue[i] = analogRead(lineSensePin[i]);
-  if (lineValue[i] <= WHITE_THRESHOLD) {
-      error += weights[i];
-      activeSensors++;
-      if (i == 2) {lineDetected = true;}
+    if (lineValue[i] <= WHITE_THRESHOLD) {
+        error += weights[i];
+        activeSensors++;
+        if (i == 2) {lineDetected = true;}
     }
   }
 
   
 
-  /*
-  for (int i = 0; i < 5; i++) {
-    Serial.println("route");
-    Serial.println(routeList[i]);  
-
-  }
-  */
-
-  if (activeSensors >= 4) nodeDetected = true; // check for node
-
-  if (nodeDetected == true) {
-    motorTurn(0);
-  }
+  if (activeSensors == 5) nodeDetected = true; // check for node
 
 /*
+  Serial.print("Start Pos: ");
+  Serial.println(startPos);
+  Serial.print("Next Pos: ");
+  Serial.println(nextPos);
+*/
+
+  if (routeRank[currentNodeRank] != -1) {
+    Serial.print("Route Rank: ");
+    Serial.println(routeRank[currentNodeRank]);
+    Serial.print("Start Pos: ");
+    Serial.println(startPos);
+    Serial.print("Next Pos: ");
+    Serial.println(nextPos);
+
+  }
+
+  
+  
+
+
 
   if (nodeDetected == true) { // if reached a node
+
+    motorDrive(0,0);
+    delay(500);
 
     if (passedJunc == true) { // if node is not a junction
 
@@ -333,12 +345,12 @@ void loop() {
       
       if (nextPos == routeList[currentRouteNodeIndex]) { // if the node youre at right now is an actual route node
         currentRouteNodeIndex++; // move onto the next routelist node
-        routeFinished = sendArrival(nextPos);
         startPos = nextPos; // new start node becomes the last dest node
         nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
-        //routeFind(); // find the new route for the current start and next nodes
-        //updateNextPos();
+        routeFind(); // find the new route for the current start and next nodes
+        updateNextPos();
         passedJunc = false;
+        motorDrive(speedL, speedR);
         while (nodeDetected) { // while still on node 
           activeSensors = 0;
           for (int i = 0; i < 5; i++) {
@@ -351,6 +363,16 @@ void loop() {
           if (activeSensors < 3) {nodeDetected = false;}
         }
 
+        if (nextPos == 5) {
+          motorDrive(speedL, speedR);
+          while (!obstacleDetected) {
+            distanceSense();
+          }
+          motorDrive(0, 0);
+        }
+
+        Serial.println("main route loop");
+
       }
 
 
@@ -358,18 +380,22 @@ void loop() {
         startPos = nextPos; // reached node is new start
         nextPos = routeList[currentRouteNodeIndex]; // nextpos becomes the original main destination node from the routelist
         passedJunc = false; // reset junction var
+        Serial.println("sub route loop");
 
       }
 
       if ( (startPos == 0 && nextPos == 4) || (startPos == 4 && nextPos == 0) ) { passedJunc = true; } // if starts at 0 and goes 4 or vice versa, next node is not junction
       else if ( (startPos == 2 && nextPos == 3) || (startPos == 3 && nextPos == 2) ) { passedJunc = true; } // if starts at 2 and goes 3 or vice versa, next node is not junction
 
+
     }
 
 
 
 
-    if (passedJunc == false) { // if at a junction
+    else if (passedJunc == false) { // if at a junction
+
+      Serial.println("at junc loop");
 
       if (currentDir == 0 && nextPos == 1) { // if going clockwise to node 1
         motorTurn(0); // turn right at the next junction
@@ -385,11 +411,13 @@ void loop() {
       if (startPos == 1 && (nextPos == 2 || nextPos == 4)) { // if going from node 1 to node 2 or 4
         motorTurn(1); // turn left at the next junction
         Serial.println("turn left");
+        currentDir = 1;
       }
 
       else if (startPos == 1 && (nextPos == 0 || nextPos == 3)) { // if going from node 1 to node 0 or 3
         motorTurn(0); // turn righ at the next junction
         Serial.println("turn right");
+        currentDir = 0;
       }
 
       passedJunc = true; // indicate that the junction has been passed
@@ -398,9 +426,8 @@ void loop() {
 
 
   }
-*/
 
-
+  if (currentDir != nodeDirection[startPos][nextPos]) { motor180(); }
 
 
 
@@ -429,6 +456,7 @@ void loop() {
 
 
 
+
   //turn-around at an obstacle
   if (obstacleDetected == true) {
     motorTurn(0);
@@ -441,6 +469,8 @@ void loop() {
       motorTurn(0);
     }
   }
+
+  
   
   
 
@@ -448,6 +478,7 @@ void loop() {
   int correction = error * TURN_GAIN;
   int leftSpeed = speedL;
   int rightSpeed = speedR;
+
 
   if (!lineDetected) {
     leftSpeed += correction;
