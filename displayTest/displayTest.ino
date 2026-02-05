@@ -11,7 +11,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 const short button = 1;
 
-short node = 0;
+short node = -1;
 const short route[] = {0, 1, 3, 2, 5};
 
 int buttonState = LOW;
@@ -56,6 +56,11 @@ void setup() {
     while (true);
   }
   display.clearDisplay();
+  display.setTextSize(4);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 16);
+  display.print("START");
+  display.display();
 }
 
 const short arrowX = 48;
@@ -63,12 +68,11 @@ const short arrowY = 24;
 
 const short centre = 8;
 
-void updateUI(short route[],short node) {
+void updateUI(const short route[],short node) {
   short scrollVertical = 8;
-  display.setTextSize(7);
-  display.setTextColor(SSD1306_WHITE);
   while (scrollVertical >= -64)
   {
+    display.setTextSize(7);
     drawArrow32x16(arrowX, arrowY);
     display.setCursor(4, scrollVertical);
     display.print(route[node]);
@@ -79,21 +83,19 @@ void updateUI(short route[],short node) {
     scrollVertical -= 2;     
     display.clearDisplay();
   }
-  node++;
   scrollVertical = 64;
   while (scrollVertical >= 8)
   {
     drawArrow32x16(arrowX, arrowY);
     display.setCursor(4, scrollVertical);
-    display.print(route[node]);
-    display.setCursor(86, scrollVertical);
     display.print(route[node+1]);
+    display.setCursor(86, scrollVertical);
+    display.print(route[node+2]);
     display.display();
     delay(5);
     scrollVertical -= 2;     
     display.clearDisplay();
   }
-  delay(100);
 
 }
 void loop() {
@@ -112,25 +114,22 @@ void loop() {
           buttonState = reading;
       }
   }
-  /*
   if (node>3)
   {
-    node = 0;
-    scrollText(route, node);
+    
   }
   lastState = reading;
   if (lastState == HIGH)
   {
     node++;
     updateUI(route, node);
+    
   }
-  */
 }
 /*
 TO DO:
-1. Displays START when beginning route
-  1a. Displays PARK when ending route and plays music from buzzer
-  1b. Once parked, display END
+1a. Displays PARK when ending route and plays music from buzzer
+1b. Once parked, display END
 
 2. At each node, plays buzzer sound relating to node number
 */
