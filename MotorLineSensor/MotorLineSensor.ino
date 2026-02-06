@@ -17,7 +17,7 @@ bool routeCompleted = false;  // <--- ADDED: Flag for route completion
 //node and wight arrays
 int nodes[][5] = {{0, 1, 1, 0, 1}, {1, 0, 1, 1, 1}, {1, 1, 0, 1, 0}, {0, 1, 1, 0, 1}, {1, 1, 0, 1, 0}}; // direct node connections, 0 - no direct connection, 1 - direct connection
 int nodeWeights[][5] = {{9, 2, 2, 9, 1}, {2, 9, 2, 4, 4}, {2, 2, 9, 1, 9}, {9, 4, 1, 9, 6}, {1, 4, 9, 6, 9}}; // route weightings for each node
-int nodeDirection[][5] = {{9, 1, 1, 9, 0}, {0, 9, 1, 0, 1}, {0, 0, 9, 1, 9}, {9, 1, 0, 9, 1}, {1, 0, 9, 0, 9}}; // 0 clockwise  1 anti clockwise
+int nodeDirection[][5] = {{9, 1, 1, 9, 0}, {1, 9, 1, 0, 0}, {0, 0, 9, 1, 9}, {9, 1, 0, 9, 1}, {1, 0, 9, 0, 9}}; // 0 clockwise  1 anti clockwise
 
 int nodePathRank03[3] = {2, 1, 4}; // route paths for node 0 -> 3 and vice versa
 int nodePathRank24[3] = {0, 1, 3}; // route paths for node 2 -> 4 and vice versa
@@ -37,9 +37,9 @@ int nextPos = 0;
 
 
 //Fastest speed and turn_gain mobot can have before errors
-const int speedR = 150;
+const int speedR = 225;
 const int speedL = int(speedR * 0.95);
-const int TURN_GAIN = 75;
+const int TURN_GAIN = 110;
 
 int currentDir = 1; // 0 CW    1 ACW
 
@@ -51,10 +51,12 @@ int activeSensors = 0;
 bool passedJunc = true;
 bool routeFinished = false;
 
+
+
 //Initialises 0s for LineSensorValues
 int lineValue[5];
 const int lineSensePin[5] = { 4, 5, 6, 7, 15 };
-const int WHITE_THRESHOLD = 700;
+const int WHITE_THRESHOLD = 800;
 
 
 
@@ -95,7 +97,7 @@ void motorDir(int dir) {
 void motorTurn(int dir) {
   //move forward a bit
   motorDrive(speedL, speedR);
-  delay(200);
+  delay(100);
   /*
   while (nodeDetected) { // while still on node 
     activeSensors = 0;
@@ -121,6 +123,7 @@ void motorTurn(int dir) {
   }
   //while mid sensor isnt on line, keep on turnin
   motorDrive(speedL, speedR);
+  delay(100);
   while (lineDetected) {
     int midSensor = analogRead(lineSensePin[2]);
     if (midSensor > WHITE_THRESHOLD) lineDetected = false;
@@ -151,10 +154,10 @@ void motor180(int startPos) {
   }
   motorDrive(0, 0);
   motorDir(0);
-  if (startPos != 1) {
-    if (currentDir == 0) { currentDir = 1; } // flip direction
-    else { currentDir = 0; }
-  }
+  //if (startPos != 1) 
+  if (currentDir == 0) { currentDir = 1; } // flip direction
+  else { currentDir = 0; }
+  
 }
 
 
@@ -328,7 +331,7 @@ void loop() {
 
   
 
-  if (activeSensors == 5) nodeDetected = true; // check for node
+  if (activeSensors >= 4) nodeDetected = true; // check for node
 
 /*
   Serial.print("Start Pos: ");
@@ -454,13 +457,13 @@ void loop() {
       if (currentDir == 0 && nextPos == 1) { // if going clockwise to node 1
         motorTurn(0); // turn right at the next junction
         Serial.println("turn right");
-        currentDir = 1;
+        if (startPos == 4) { currentDir = 1; }
       }
 
       else if (currentDir == 1 && nextPos == 1) { // if going anti-clockwise to node 1
         motorTurn(1); // turn left at the next junction
         Serial.println("turn left");
-        currentDir = 0;
+        if (startPos == 0) { currentDir = 0; }
       }
 
 
