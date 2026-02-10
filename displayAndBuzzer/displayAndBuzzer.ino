@@ -31,9 +31,10 @@ const short I2C_SCL = 9;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 //Test Route Configuration : TO BE REMOVED
+/*
 const short route[] = {0, 1, 3, 2, 5};
 short nodeIndex = -1;
-
+*/
 //Pin Configurations
 const short button = 1;
 const short buzzer = 12;
@@ -76,9 +77,10 @@ void drawArrow32x16(int x, int y) {
 }
 
 //Test function without animation
-void updateUI(const short route[], short nodeIndex)
+void updateUI(int route[], int nodeIndex)
 {
   buzz(route[nodeIndex+1]);
+  display.clearDisplay();
   display.setTextSize(7);
   drawArrow32x16(arrowX, arrowY);
   display.setCursor(4, 8);
@@ -86,7 +88,6 @@ void updateUI(const short route[], short nodeIndex)
   display.setCursor(86, 8);
   display.print(route[nodeIndex+1]);
   display.display();
-  display.clearDisplay();
 }
 
 //Function to animate numbers on display
@@ -213,9 +214,13 @@ void connectToWiFi() {
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     Serial.flush();
-    delay(300);
+    tone(buzzer, NOTE_A4);
+    delay(150);
+    noTone(buzzer);
+    delay(150);
   }
   Serial.println("Connected");
+  buzzStart();
   Serial.print("Obtaining IP address");
   Serial.flush();
 
@@ -381,13 +386,28 @@ void setup() {
   display.setCursor(0, 16);
   display.print("START");
   display.display();
-  buzzStart();
+
+  // conncect up to wifi
+  connectToWiFi();
+
+  // get that route from server
+  while (!getRoute()) {  //Call getRoute() function instead of raw HTTP
+    Serial.println("Retrying to get route in 3 seconds...");
+    delay(3000);
+  }
+  
+  // get first dest from route or whatever
+  int firstComma = route.indexOf(',');
+  if (firstComma != -1) {
+    String firstPos = route.substring(0, firstComma);
+    nextPos = firstPos.toInt();
+  } else {
+    nextPos = route.toInt();
+  }
+  connectToServer();
+  updateUI(routeList, nextPos);
 }
 
 void loop() {
-  if (route[nodeIndex] == 5)
-  {
-    theme();
-  }
-  updateUI(route, nodeIndex);
+  
 }
