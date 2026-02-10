@@ -154,3 +154,24 @@ bool sendArrival(int position) {
     return false;
   }
 }
+
+
+setup () {
+  // conncect up to wifi
+  connectToWiFi();
+
+  // get that route from server
+  while (!getRoute()) {  // <--- CHANGED: Call getRoute() function instead of raw HTTP
+    Serial.println("Retrying to get route in 3 seconds...");
+    delay(3000);
+  }
+  
+  // get first dest from route or whatever
+  int firstComma = route.indexOf(',');
+  if (firstComma != -1) {
+    String firstPos = route.substring(0, firstComma);
+    nextPos = firstPos.toInt();
+  } else {
+    nextPos = route.toInt();
+  }
+}
