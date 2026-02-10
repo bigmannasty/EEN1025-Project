@@ -13,7 +13,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 //Test Route Configuration : TO BE REMOVED
 const short route[] = {0, 1, 3, 2, 5};
-short node = -1;
+short nodeIndex = -1;
 
 //Pin Configurations
 const short button = 1;
@@ -56,8 +56,23 @@ void drawArrow32x16(int x, int y) {
   );
 }
 
+void updateUI(const short route[], short nodeIndex)
+{
+  buzz(route[nodeIndex+1]);
+  display.setTextSize(7);
+  drawArrow32x16(arrowX, arrowY);
+  display.setCursor(4, 8);
+  display.print(route[nodeIndex]);
+  display.setCursor(86, 8);
+  display.print(route[nodeIndex+1]);
+  display.display();
+  display.clearDisplay();
+}
+
 //Function to animate numbers on display
+/*
 void updateUI(const short route[],short node) {
+  buzz(node);
   short scrollVertical = 8;
   while (scrollVertical >= -64)
   {
@@ -86,23 +101,87 @@ void updateUI(const short route[],short node) {
     display.clearDisplay();
   }
 }
+*/
 
+//Function plays Jurrasic Park Theme on buzzer
+void theme() {
+  tone(buzzer, NOTE_C5);  //C
+  delay(250);
+  tone(buzzer, NOTE_B5);  //B
+  delay(250);
+  tone(buzzer, NOTE_C5);  //C
+  delay(500);
+  tone(buzzer, NOTE_G4);  //G
+  delay(500);
+  tone(buzzer, NOTE_F4);  //f
+  delay(500);
 
-void playSound(int number)
-{
-  switch (number) {
-    case 1:
-      break;
-    case 2:
-      break;
-    case 3:
-      break;
-    case 4:
-      break;
-    case 5:
-      break;
+  noTone(buzzer);
+  delay(100);
 
+  tone(buzzer, NOTE_C5);  //C
+  delay(250);
+  tone(buzzer, NOTE_B5);  //B
+  delay(250);
+  tone(buzzer, NOTE_C5);  //C
+  delay(500);
+  tone(buzzer, NOTE_G4);  //G
+  delay(500);
+  tone(buzzer, NOTE_F4);  //f
+  delay(500);
+
+  noTone(buzzer);
+  delay(100);
+
+  tone(buzzer, NOTE_C5);  //C
+  delay(250);
+  tone(buzzer, NOTE_B5);  //B
+  delay(250);
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, NOTE_B5);  //B
+  delay(250);
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, NOTE_C5);  //C
+  delay(750);
+
+  noTone(buzzer);
+  tone(buzzer, NOTE_G4);  //G
+  delay(500);
+  tone(buzzer, NOTE_C4);  //low c
+  delay(500);
+  tone(buzzer, NOTE_AS4);  //Bflat
+  delay(1250);
+  noTone(buzzer);
+  delay(500);
+
+  noTone(buzzer);
+
+}
+
+//Function that buzzes for each node passed
+void buzz(int nodeIndex) {
+
+  for (int i=0; i<nodeIndex; i++)
+  {
+    delay(75);
+    tone(buzzer, NOTE_A3);
+    delay(75);
+    noTone(buzzer);
   }
+}
+
+//Plays jingle to indicate starting movement
+void buzzStart() {
+
+  tone(buzzer, NOTE_D4);
+  delay(100);
+  tone(buzzer, NOTE_C4);
+  delay(100);
+  tone(buzzer, NOTE_A5);
+  delay(100);
+  noTone(buzzer);
 }
 
 void setup() {
@@ -123,33 +202,13 @@ void setup() {
   display.setCursor(0, 16);
   display.print("START");
   display.display();
+  buzzStart();
 }
 
 void loop() {
-
-  int reading = digitalRead(button);
-
-  if (reading != lastState)
+  if (route[nodeIndex] == 5)
   {
-    lastDebounceTime = millis();
+    theme();
   }
-
-  if ((millis() - lastDebounceTime) > debounceDelay)
-  {
-      if (reading != buttonState)
-      {
-          buttonState = reading;
-      }
-  }
-  if (node>3)
-  {
-    
-  }
-  lastState = reading;
-  if (lastState == HIGH)
-  {
-    node++;
-    updateUI(route, node);
-    
-  }
+  updateUI(route, nodeIndex);
 }
