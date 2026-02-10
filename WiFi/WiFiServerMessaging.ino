@@ -1,14 +1,17 @@
 #include <WiFi.h> 
 
 // wi-fi details 
-char ssid[] = "***"; 
-char password[] = "***"; 
+char ssid[] = "iot"; 
+char password[] = "needlings84wheezily"; 
 
 WiFiClient client; 
 
 //Server details
 const char server[] = "3.250.38.184";
 const int port = 8000;
+
+String route = "";
+int routeList[] = {0, 0, 0, 0, 0};
 
 //Attempt to connect to server
 bool connectToServer() {  // <--- CHANGED: Renamed for clarity
@@ -156,12 +159,12 @@ bool sendArrival(int position) {
 }
 
 
-setup () {
+void setup () {
   // conncect up to wifi
   connectToWiFi();
 
   // get that route from server
-  while (!getRoute()) {  // <--- CHANGED: Call getRoute() function instead of raw HTTP
+  while (!getRoute()) {  //Call getRoute() function instead of raw HTTP
     Serial.println("Retrying to get route in 3 seconds...");
     delay(3000);
   }
@@ -174,4 +177,9 @@ setup () {
   } else {
     nextPos = route.toInt();
   }
+}
+
+void loop()
+{
+  
 }
