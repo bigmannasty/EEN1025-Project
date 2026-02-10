@@ -1,26 +1,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <WiFi.h> 
+#include <BLEDevice.h>
 #include "pitches.h"
-
-// wi-fi details 
-char ssid[] = "iot"; 
-char password[] = "needlings84wheezily"; 
-WiFiClient client;
-
-//Server details
-const char server[] = "3.250.38.184";
-const int port = 8000;
-
-// read buffer size for HTTP response
-#define BUFSIZE 512
-
-//Routing Details
-String route = "";
-int routeList[] = {0, 0, 0, 0, 0};
-int nextPos;
-
 
 //OLED Display Variables
 #define OLED_ADDR 0x3C
@@ -35,17 +17,38 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 const short route[] = {0, 1, 3, 2, 5};
 short nodeIndex = -1;
 */
+
+
+static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
+static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
+
+static BLERemoteCharacteristic* pRemoteCharacteristic;
+static BLEAdvertisedDevice* myDevice;
+bool doConnect = false;
+
+// Callback for when the server sends a notification
+static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, 
+                            uint8_t* pData, size_t length, bool isNotify) {
+  int nodeNo = *pData; // Simple cast for a single byte/integer
+  Serial.print("Received Value: ");
+  Serial.println(nodeNo);
+  updateUI(nodeNo);
+}
+
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
+    if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID)) {
+      BLEDevice::getScan()->stop();
+      myDevice = new BLEAdvertisedDevice(advertisedDevice);
+      doConnect = true;
+    }
+  }
+};
+
+
+
 //Pin Configurations
-const short button = 1;
 const short buzzer = 12;
-
-
-//Button Configuration
-int buttonState = LOW;
-int lastState = LOW;
-unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 50;
-
 
 //Variables for Display
 const short arrowX = 48;
@@ -77,16 +80,16 @@ void drawArrow32x16(int x, int y) {
 }
 
 //Test function without animation
-void updateUI(int route[], int nodeIndex)
+void updateUI(int nodeNo)
 {
-  buzz(route[nodeIndex+1]);
+  buzz(nodeNo);
   display.clearDisplay();
   display.setTextSize(7);
   drawArrow32x16(arrowX, arrowY);
   display.setCursor(4, 8);
-  display.print(route[nodeIndex]);
+  display.print(nodeNo);
   display.setCursor(86, 8);
-  display.print(route[nodeIndex+1]);
+  display.print(nodeNo);
   display.display();
 }
 
@@ -204,177 +207,11 @@ void buzzStart() {
   delay(100);
   noTone(buzzer);
 }
-
-void connectToWiFi() {
-  Serial.print("Connecting to Network: ");
-  Serial.print(ssid);
-  Serial.flush();
-
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    Serial.flush();
-    tone(buzzer, NOTE_A4);
-    delay(150);
-    noTone(buzzer);
-    delay(150);
-  }
-  Serial.println("Connected");
-  buzzStart();
-  Serial.print("Obtaining IP address");
-  Serial.flush();
-
-  while (WiFi.localIP() == INADDR_NONE) {
-    Serial.print(".");
-    Serial.flush();
-    delay(300);
-  }
-  Serial.println();
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-}
-
-//Attempt to connect to server
-bool connectToServer() {
-  Serial.print("Connecting to server: ");  
-  Serial.print(server);
-  Serial.print(":");
-  Serial.println(port);
-  
-  if (!client.connect(server, port)) {
-    Serial.println("Connection failed!");
-    return false;
-  }
-  
-  Serial.println("Connected to server!");  // <--- ADDED: Success message
-  return true;
-}
-
-String readResponse() {
-  String response = "";
-  unsigned long timeout = millis();
-  
-  while (client.connected() && millis() - timeout < 5000) {  // <--- CHANGED: Timeout handling
-    while (client.available()) {
-      char c = client.read();
-      response += c;
-      timeout = millis();  // Reset timeout on data received
-    }
-  }
-  
-  return response;
-}
-
-int getStatusCode(String& response) {
-  String code = response.substring(9, 12);
-  return code.toInt();
-}
-
-String getResponseBody(String& response) {
-  int split = response.indexOf("\r\n\r\n");
-  String body = response.substring(split + 4, response.length());
-  body.trim();
-  return body;
-}
-
-// Function to send GET request and get route
-bool getRoute() {
-  if (!connectToServer()) return false;
-  
-  Serial.println("Sending GET request for route...");
-  
-  // Send proper HTTP GET request
-  client.println("GET /api/getRoute/wjdn3008 HTTP/1.1");
-  client.println("Host: 3.250.38.184");  // <--- ADDED: Required HTTP header
-  client.println("Connection: close");  // <--- ADDED: Close connection after
-  client.println();  // End of headers
-  
-  delay(100);  // Give server time to respond
-  
-  // Read response
-  String response = readResponse();
-  int statusCode = getStatusCode(response);
-  
-  Serial.print("GET Response Status: ");
-  Serial.println(statusCode);
-  
-  if (statusCode == 200) {
-    route = getResponseBody(response);  // <--- Store route globally
-    int j = 0;
-    for (int i = 0; route[i] != '\0'; i++) {
-      if (route[i] != ',') {
-        routeList[j] += route[i] - 48;
-        j++;
-      }
-    }
-    Serial.print("Route received: ");
-    Serial.println(route);
-    client.stop();
-    return true;
-  } else {
-    Serial.println("Failed to get route");
-    client.stop();
-    return false;
-  }
-}
-
-// Function to send POST request when arriving at node
-bool sendArrival(int position) {
-  if (!connectToServer()) return false;
-  
-  Serial.print("Sending POST for position: ");
-  Serial.println(position);
-  
-  // Prepare POST body
-  String postBody = "position=" + String(position);
-  
-  // Send HTTP POST request
-  client.println("POST /api/arrived/wjdn3008 HTTP/1.1");
-  client.println("Host: 3.250.38.184");  // <--- ADDED: Required header
-  client.println("Content-Type: application/x-www-form-urlencoded");
-  client.print("Content-Length: ");  // <--- FIXED: Proper Content-Length
-  client.println(postBody.length());
-  client.println("Connection: close");  // <--- ADDED: Close connection
-  client.println();  // End of headers
-  client.println(postBody);  // Send body
-  
-  delay(100);  // Give server time to respond
-  
-  // Read response
-  String response = readResponse();
-  int statusCode = getStatusCode(response);
-  
-  Serial.print("POST Response Status: ");
-  Serial.println(statusCode);
-  
-  if (statusCode == 200) {
-    String body = getResponseBody(response);
-    Serial.print("Server response: ");
-    Serial.println(body);
-    client.stop();
-    
-    // Check if finished
-    if (body.equals("Finished")) {
-      Serial.println("Route completed!");
-      return true;  // Finished
-    }
-    return false;  // Not finished
-  } 
-  
-  else {
-    Serial.println("Failed to send arrival");
-    client.stop();
-    return false;
-  }
-}
-
 void setup() {
   Serial.begin(115200);
 
   // Start I2C on chosen pins
   Wire.begin(I2C_SDA, I2C_SCL);
-  pinMode(button, INPUT_PULLDOWN);
-  //attachInterrupt(button, handleButtonISR, FALLING);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
     Serial.println("SSD1306 allocation failed");
@@ -386,28 +223,26 @@ void setup() {
   display.setCursor(0, 16);
   display.print("START");
   display.display();
-
-  // conncect up to wifi
-  connectToWiFi();
-
-  // get that route from server
-  while (!getRoute()) {  //Call getRoute() function instead of raw HTTP
-    Serial.println("Retrying to get route in 3 seconds...");
-    delay(3000);
-  }
-  
-  // get first dest from route or whatever
-  int firstComma = route.indexOf(',');
-  if (firstComma != -1) {
-    String firstPos = route.substring(0, firstComma);
-    nextPos = firstPos.toInt();
-  } else {
-    nextPos = route.toInt();
-  }
-  connectToServer();
-  updateUI(routeList, nextPos);
+  BLEDevice::init("");
+  BLEScan* pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true);
+  pBLEScan->start(5, false);
+  buzzStart();
 }
 
 void loop() {
-  
+  if (doConnect) {
+    BLEClient* pClient = BLEDevice::createClient();
+    pClient->connect(myDevice);
+    BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
+    if (pRemoteService != nullptr) {
+      pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+      if (pRemoteCharacteristic != nullptr && pRemoteCharacteristic->canNotify()) {
+        pRemoteCharacteristic->registerForNotify(notifyCallback);
+      }
+    }
+    doConnect = false;
+  }
+  delay(1000);
 }
