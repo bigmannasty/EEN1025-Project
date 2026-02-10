@@ -6,6 +6,31 @@ char password[] = "***";
 
 WiFiClient client; 
 
+void connectToWiFi() {
+  Serial.print("Connecting to Network: ");
+  Serial.print(ssid);
+  Serial.flush();
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    Serial.flush();
+    delay(300);
+  }
+  Serial.println("Connected");
+  Serial.print("Obtaining IP address");
+  Serial.flush();
+
+  while (WiFi.localIP() == INADDR_NONE) {
+    Serial.print(".");
+    Serial.flush();
+    delay(300);
+  }
+  Serial.println();
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
 //Server details
 const char server[] = "3.250.38.184";
 const int port = 8000;
