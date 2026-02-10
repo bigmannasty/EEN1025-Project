@@ -38,7 +38,7 @@ int nextPos = 0;
 
 
 //Fastest speed and turn_gain mobot can have before errors
-const int speedR = 225;
+const int speedR = 255;
 const int speedL = int(speedR * 0.95);
 const int TURN_GAIN = 110;
 
@@ -141,21 +141,19 @@ void motorTurn(int dir) {
 
 // function to do a 180 
 void motor180(int startPos) {
-  motorDrive(100,100);//move forward a bit before turn
-  delay(50);
+ motorDrive(0,0);
+  motorDir(1);
+  motorDrive(speedL, speedR);
+  delay(200);
   digitalWrite(motor1Phase, HIGH);
   digitalWrite(motor2Phase, HIGH);
-  motorDrive(speedL, speedR);
-  delay(500);
+  delay(200);
   lineDetected = false;
   //while mid sensor isnt on line, keep on turnin
   while (!lineDetected) {
-    int midSensor = analogRead(lineSensePin[2]);
-    if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
+    if (analogRead(lineSensePin[2]) <= WHITE_THRESHOLD - 300) { motorDrive(0, 0); lineDetected = true; }
   }
-  motorDrive(0, 0);
   motorDir(0);
-  //if (startPos != 1) 
   if (currentDir == 0) { currentDir = 1; } // flip direction
   else { currentDir = 0; }
   
@@ -609,7 +607,7 @@ void loop() {
 
   }
 
-  
+  if (nextPos == 5) {motorDrive(0,0); while(1){}}
 
 
 
