@@ -19,7 +19,7 @@ const int motor2Phase = 40;
 
 // Added these global variables
 String route = "";  // <--- ADDED: Store the route received from GET
-int routeList[] = {0, 2, 1, 5};
+int routeList[] = {0, 2, 5};
 int position = 0;  // <--- ADDED: Track current position index
 bool routeCompleted = false;  // <--- ADDED: Flag for route completion
 
@@ -60,6 +60,7 @@ int error = 0;
 int activeSensors = 0;
 bool passedJunc = true;
 bool routeFinished = false;
+bool parkingFromNode1 = false;
 
 
 
@@ -140,6 +141,7 @@ void motorTurn(int dir) {
 void motor180() {
   //motorDrive(100,100);//move forward a bit before turn
   //delay(50);
+  Serial.println("Doing 180");
   motorDrive(0,0);
   motorDir(1);
   motorDrive(speedL, speedR);
@@ -403,7 +405,7 @@ void setup() {
 */
   // set lineDetected to false because i forgot why
   lineDetected = false;
-  
+  if (routeList[-2] == 1) { parkingFromNode1 = true; }
   
 }
 
@@ -449,7 +451,7 @@ void loop() {
         nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
         // parking node loop
         if (nextPos == 5) { // when parking up
-
+          if (startPos != 1) { parkingFromNode1 = false; }
           Serial.println("Next Node 5");
           
 
@@ -475,10 +477,8 @@ void loop() {
           */
 
           //routeFinished = sendArrival(nextPos);
-          motorDrive(0, 0);
-          while (1) {Serial.println("parked");  delay(500); }
         }
-        if (nodes[startPos][nextPos] == 0) { // if theres no direct connection between the 2 nodes
+        if (nodes[startPos][nextPos] == 0 && nextPos != 5) { // if theres no direct connection between the 2 nodes
           if (startPos == 0 || startPos == 3) { nextPos = nodePathRank03[currentNodeRank]; } // if going 0 -> 3 or vice versa use the 1st ranking
           else { nextPos = nodePathRank24[currentNodeRank]; } // if going 2 -> 4 or vice versa use the 2nd ranking
         }
@@ -535,20 +535,20 @@ void loop() {
       else if (nextPos == 5) { // node conditions for parking
         passedJunc = true; 
 
-        if (startPos == 1) { // if going 1 -> 5
+        if (startPos == 1 && parkingFromNode1 == true) { // if going 1 -> 5
           if (currentDir == 1) { motor180(); }
           passedJunc = false;
         }
 
         else { // if going other nodes -> 5
-          if (currentDir == 0) { motorTurn(0); } // turn right when clockwise
-          else if (currentDir == 1) { motorTurn(1); } // turn left when anti clock
+          if (currentDir == 0) { motorTurn(1); } // turn right when clockwise
+          else if (currentDir == 1) { motorTurn(0); } // turn left when anti clock
 
           if (startPos == 0 || startPos == 2) { nextPos = 1; }
         }
       }
 
-      if (currentDir != nodeDirection[startPos][nextPos] && nextPos != 5) { motor180(); } // check for correct direction, if not going the right way flip round
+      if (currentDir != nodeDirection[startPos][nextPos] && nextPos != 5 && routeList[currentRouteNodeIndex] != 5) { motor180(); } // check for correct direction, if not going the right way flip round
 
 
     }
@@ -607,12 +607,14 @@ void loop() {
 
   }
 
-  else if (nodeDetected == true && passedJunc == true && nextPos == 1 && routeList[currentNodeIndex] == 5) {
+  else if (nodeDetected == true && passedJunc == true && nextPos == 1 && routeList[currentRouteNodeIndex] == 5) {
     nextPos = 5;
     finalDrive = true;
   }
 
   else if (nodeDetected == true && passedJunc == false && startPos == 1 && nextPos == 5) {
+    motorDrive(0,0);
+    delay(500);
     finalDrive = true;
   }
   
@@ -630,14 +632,18 @@ void loop() {
   }
 */
   
-  if (nextPos == 5 && finalDrive) {
+  if (finalDrive) {
     int DistanceValue = analogRead(distAnalogPin);
+    Serial.println("DistanceValue");
     Serial.println(DistanceValue);
-    if (DistanceValue >= 1800 && lastDist >= 1800) {
+    Serial.println("lastDist");
+    Serial.println(lastDist);
+    if (DistanceValue >= 1000 && lastDist >= 1000) {
       motorDrive(0,0);
       //sendArrival(nextPos);
       while (1) {}
     }
+    lastDist = DistanceValue;
   }
   
 
