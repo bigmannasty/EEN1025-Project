@@ -19,7 +19,7 @@ const int motor2Phase = 40;
 
 // Added these global variables
 String route = "";  // <--- ADDED: Store the route received from GET
-int routeList[] = {0, 2, 5};
+int routeList[] = {0, 3, 2, 5};
 int position = 0;  // <--- ADDED: Track current position index
 bool routeCompleted = false;  // <--- ADDED: Flag for route completion
 
@@ -141,7 +141,7 @@ void motorTurn(int dir) {
 void motor180() {
   //motorDrive(100,100);//move forward a bit before turn
   //delay(50);
-  Serial.println("Doing 180");
+  //Serial.println("Doing 180");
   motorDrive(0,0);
   motorDir(1);
   motorDrive(speedL, speedR);
@@ -169,7 +169,7 @@ void motor180() {
 //check distance sensor & stop motor if too close to object
 bool distanceSense() {
   int DistanceValue = analogRead(distAnalogPin);
-  Serial.println(DistanceValue);
+  //Serial.println(DistanceValue);
   if (DistanceValue >= 1800) {
     motorDrive(0, 0);
     return true;
@@ -436,6 +436,17 @@ void loop() {
   
   if (activeSensors >= 4) nodeDetected = true; // check for node
 
+/*
+  Serial.println("next pos");
+  Serial.println(nextPos);
+  Serial.println("start pos");
+  Serial.println(startPos);
+  Serial.println("passed junction");
+  Serial.println(passedJunc);
+  Serial.println("final drive");
+  Serial.println(finalDrive);
+  */
+
 
   if (nodeDetected == true && nextPos != 5) { // if reached a node
 
@@ -452,7 +463,7 @@ void loop() {
         // parking node loop
         if (nextPos == 5) { // when parking up
           if (startPos != 1) { parkingFromNode1 = false; }
-          Serial.println("Next Node 5");
+          //Serial.println("Next Node 5");
           
 
           /*
@@ -499,7 +510,7 @@ void loop() {
 
         
 
-        Serial.println("main route loop");
+        //Serial.println("main route loop");
 
       }
 
@@ -520,14 +531,16 @@ void loop() {
           }
           if (activeSensors < 3) {nodeDetected = false;}
         }
-        Serial.println("sub route loop");
+        //Serial.println("sub route loop");
 
       }
 
+/*
       Serial.print("Start: ");
       Serial.println(startPos);
       Serial.print("Next: ");
       Serial.println(nextPos);
+      */
 
       if ( (startPos == 0 && nextPos == 4) || (startPos == 4 && nextPos == 0) ) { passedJunc = true; } // if starts at 0 and goes 4 or vice versa, next node is not junction
       else if ( (startPos == 2 && nextPos == 3) || (startPos == 3 && nextPos == 2) ) { passedJunc = true; } // if starts at 2 and goes 3 or vice versa, next node is not junction
@@ -535,16 +548,41 @@ void loop() {
       else if (nextPos == 5) { // node conditions for parking
         passedJunc = true; 
 
-        if (startPos == 1 && parkingFromNode1 == true) { // if going 1 -> 5
-          if (currentDir == 1) { motor180(); }
-          passedJunc = false;
+        if (startPos == 1 && parkingFromNode1) { // if going 1 -> 5
+          if (currentDir == 1) { motor180(); } // if facing to the right turn around
+          passedJunc = false; // will come to that 1 junc
+        }
+
+        else if (startPos == 1 && !parkingFromNode1) { // if passing through 1 while -> 5
+          if (currentDir == 1) { // if direction is anti 
+            if (routeList[currentRouteNodeIndex - 1] == 0) { motorTurn(1); }
+            else { motorTurn(0); }
+          } 
+          
+          else if (currentDir == 0) { 
+            if (routeList[currentRouteNodeIndex - 1] == 0) { motorTurn(0); }
+            else { motorTurn(1); }
+          }
+
         }
 
         else { // if going other nodes -> 5
-          if (currentDir == 0) { motorTurn(1); } // turn right when clockwise
-          else if (currentDir == 1) { motorTurn(0); } // turn left when anti clock
+          if (currentDir == 0) { motorTurn(0); } // turn right when clockwise
+          else if (currentDir == 1) { motorTurn(1); } // turn left when anti clock
 
           if (startPos == 0 || startPos == 2) { nextPos = 1; }
+        }
+
+        while (nodeDetected) { // while still on node 
+          activeSensors = 0;
+          for (int i = 0; i < 5; i++) {
+            lineValue[i] = analogRead(lineSensePin[i]);
+            if (lineValue[i] <= WHITE_THRESHOLD) {
+                error += weights[i];
+                activeSensors++;
+            }
+          }
+          if (activeSensors < 3) {nodeDetected = false;}
         }
       }
 
@@ -558,7 +596,7 @@ void loop() {
 
     else if (passedJunc == false) { // if at a junction
 
-      Serial.println("at junc loop");
+      //Serial.println("at junc loop");
 
       motorDrive(speedL, speedR);
       while (nodeDetected) { // while still on node 
@@ -575,27 +613,27 @@ void loop() {
 
       if (currentDir == 0 && nextPos == 1) { // if going clockwise to node 1
         motorTurn(0); // turn right at the next junction
-        Serial.println("turn right");
+        //Serial.println("turn right");
         if (startPos == 4) { currentDir = 1; }
       }
 
       else if (currentDir == 1 && nextPos == 1) { // if going anti-clockwise to node 1
         motorTurn(1); // turn left at the next junction
-        Serial.println("turn left");
+        //Serial.println("turn left");
         if (startPos == 0) { currentDir = 0; }
       }
 
 
       if (startPos == 1 && (nextPos == 2 || nextPos == 4)) { // if going from node 1 to node 2 or 4
         motorTurn(1); // turn left at the next junction
-        Serial.println("turn left");
+        //Serial.println("turn left");
         if (nextPos == 2) { currentDir = 1; }
         else { currentDir = 1; }
       }
 
       else if (startPos == 1 && (nextPos == 0 || nextPos == 3)) { // if going from node 1 to node 0 or 3
         motorTurn(0); // turn righ at the next junction
-        Serial.println("turn right");
+        //Serial.println("turn right");
         if (nextPos == 0) { currentDir = 0; }
         else { currentDir = 0; }
       }
@@ -607,14 +645,22 @@ void loop() {
 
   }
 
-  else if (nodeDetected == true && passedJunc == true && nextPos == 1 && routeList[currentRouteNodeIndex] == 5) {
+  else if (nodeDetected == true && passedJunc == true && nextPos == 1) {
+    motorDrive(0,0);
+    delay(200);
     nextPos = 5;
     finalDrive = true;
   }
 
   else if (nodeDetected == true && passedJunc == false && startPos == 1 && nextPos == 5) {
     motorDrive(0,0);
-    delay(500);
+    delay(200);
+    finalDrive = true;
+  }
+
+  else if (nodeDetected == true && passedJunc == true && startPos == 1 && nextPos == 5) {
+    motorDrive(0,0);
+    delay(200);
     finalDrive = true;
   }
   
@@ -634,10 +680,12 @@ void loop() {
   
   if (finalDrive) {
     int DistanceValue = analogRead(distAnalogPin);
+    /*
     Serial.println("DistanceValue");
     Serial.println(DistanceValue);
     Serial.println("lastDist");
     Serial.println(lastDist);
+    */
     if (DistanceValue >= 1000 && lastDist >= 1000) {
       motorDrive(0,0);
       //sendArrival(nextPos);
