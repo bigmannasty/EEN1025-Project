@@ -1,6 +1,6 @@
 #include <WiFi.h>
 // set up the weightings for each sensor
-const int weights[5] = { -2, -1, 0, 1, 2 };
+const int weights[5] = { -3, -1, 0, 1, 3 };
 
 
 
@@ -18,10 +18,10 @@ const int motor2PWM = 39;
 const int motor2Phase = 40;
 
 // Added these global variables
-String route = "";  // <--- ADDED: Store the route received from GET
-int routeList[] = {0, 4, 0, 5};
-int position = 0;  // <--- ADDED: Track current position index
-bool routeCompleted = false;  // <--- ADDED: Flag for route completion
+String route = "";  // Store the route received from GET
+int routeList[] = {0, 3, 5}; // Route as an int array
+int position = 0;  // Track current position index
+bool routeCompleted = false;  // Flag for route completion
 
 
 //node and wight arrays
@@ -56,11 +56,14 @@ int currentDir = 1; // 0 CW    1 ACW
 bool obstacleDetected = false;
 bool lineDetected = false;
 bool nodeDetected = false;
-int error = 0;
-int activeSensors = 0;
-bool passedJunc = true;
-bool routeFinished = false;
-bool parkingFromNode1 = false;
+int error = 0; // error from sensor weight
+int activeSensors = 0; // how many active sensors on a given scan
+bool passedJunc = true; // denoted the passing of a junction
+bool routeFinished = false; // take a big guess, probably redundant ngl
+bool parkingFromNode1 = false; // if going 1 -> direct aka if the last main route node is 1
+
+bool parkingFromN34PreFDStage1 = false; // parking from node 3 or 4 before final drive aka on the big bend 1st stage
+bool parkingFromN34PreFDStage2 = false; // parking from node 3 or 4 before final drive aka on the big bend 2nd stage
 
 
 
@@ -448,6 +451,7 @@ void loop() {
   */
 
 
+  // node detection logic
   if (nodeDetected == true && nextPos != 5) { // if reached a node
 
     motorDrive(0,0); // stop!!
@@ -455,40 +459,22 @@ void loop() {
 
     if (passedJunc == true) { // if node is not a junction
       
+      // condition logic for when non-junction main route nodes detected
       if (nextPos == routeList[currentRouteNodeIndex]) { // if the node youre at right now is an actual route node
         //routeFinished = sendArrival(nextPos);
         currentRouteNodeIndex++; // move onto the next routelist node
         startPos = nextPos; // new start node becomes the last dest node
         nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
         // parking node loop
+
         if (nextPos == 5) { // when parking up
           if (startPos != 1) { parkingFromNode1 = false; }
-          //Serial.println("Next Node 5");
           
-
-          /*
-          if (startPos == 1) { // if ending at 1
-            motorDrive(speedL, speedR); // drive
-            delay(750);
-            if (currentDir != 0) { motor180(); } // make sure facing left
-            motorDrive(speedL, speedR); // drive
-            
-          }
-          
-
-
-          motorDrive(speedL, speedR);
-          int lastDist = 0;
-          while (DistanceValue > 1500 && lastDist > 1500) { // while not at wall check for distance
-            Serial.println("Checking for wall");
-            lastDist = DistanceValue;
-            DistanceValue = analogRead(distAnalogPin);
-            Serial.println(DistanceValue);
-          }
-          */
 
           //routeFinished = sendArrival(nextPos);
         }
+
+        // checking for direct node connections
         if (nodes[startPos][nextPos] == 0 && nextPos != 5) { // if theres no direct connection between the 2 nodes
           if (startPos == 0 || startPos == 3) { nextPos = nodePathRank03[currentNodeRank]; } // if going 0 -> 3 or vice versa use the 1st ranking
           else { nextPos = nodePathRank24[currentNodeRank]; } // if going 2 -> 4 or vice versa use the 2nd ranking
@@ -514,7 +500,7 @@ void loop() {
 
       }
 
-
+      // condition logic for when non-junction main route nodes detected
       else if (nextPos != routeList[currentRouteNodeIndex]) { // if the node reached was a midpoint
         startPos = nextPos; // reached node is new start
         nextPos = routeList[currentRouteNodeIndex]; // nextpos becomes the original main destination node from the routelist
@@ -535,16 +521,13 @@ void loop() {
 
       }
 
-/*
-      Serial.print("Start: ");
-      Serial.println(startPos);
-      Serial.print("Next: ");
-      Serial.println(nextPos);
-      */
 
+      // junction condition logic
       if ( (startPos == 0 && nextPos == 4) || (startPos == 4 && nextPos == 0) ) { passedJunc = true; } // if starts at 0 and goes 4 or vice versa, next node is not junction
       else if ( (startPos == 2 && nextPos == 3) || (startPos == 3 && nextPos == 2) ) { passedJunc = true; } // if starts at 2 and goes 3 or vice versa, next node is not junction
       
+
+      // stuff for parking !!!!
       else if (nextPos == 5) { // node conditions for parking
         passedJunc = true; 
 
@@ -553,6 +536,7 @@ void loop() {
           passedJunc = false; // will come to that 1 junc
         }
 
+        /*
         else if (startPos == 1 && !parkingFromNode1) { // if passing through 1 while -> 5
           if (currentDir == 1) { // if direction is anti 
             if (routeList[currentRouteNodeIndex - 1] == 0) { motorTurn(1); }
@@ -565,14 +549,31 @@ void loop() {
           }
 
         }
+        */
 
-        else { // if going other nodes -> 5
-          if (currentDir == 0) { motorTurn(0); } // turn right when clockwise
-          else if (currentDir == 1) { motorTurn(1); } // turn left when anti clock
+        // when parking from 0/2 while at 1
+        else if (startPos == 1 && !parkingFromNode1) { // if passing through 1 while -> 5
+          if (routeList[currentRouteNodeIndex - 1] == 0 || routeList[currentRouteNodeIndex - 1] == 4) { motorTurn(1); } // if parking from 0, turn left
+          else { motorTurn(0); } // if parking from 2, turn right
+          }
 
-          if (startPos == 0 || startPos == 2) { nextPos = 1; }
+
+        else if (startPos != 3 && startPos != 4) { // if going other nodes -> 5
+          //motorTurn(currentDir); // turn left or right based on direction UNCOMMENT THIS FOR ADVANCED PARKING
+
+          //if (currentDir == 0) { motorTurn(0); } // turn right when clockwise
+          //else if (currentDir == 1) { motorTurn(1); } // turn left when anti clock
+
+          nextPos = 1; // set next position to 1
+          if (startPos == 0 && currentDir == 0) { motor180(); }
+          else if (startPos == 2 && currentDir == 1) { motor180(); }
         }
 
+        else if (startPos == 3) { nextPos = 2; if (currentDir == 1) { motor180(); } } // if parking from 3 go to 2 and 180 if need be
+
+        else { nextPos = 0; if (currentDir == 0) { motor180(); } } // if parking from 4 go to 0 and 180 if need be
+
+        motorDrive(speedL, speedR);
         while (nodeDetected) { // while still on node 
           activeSensors = 0;
           for (int i = 0; i < 5; i++) {
@@ -586,6 +587,8 @@ void loop() {
         }
       }
 
+
+
       if (currentDir != nodeDirection[startPos][nextPos] && nextPos != 5 && routeList[currentRouteNodeIndex] != 5) { motor180(); } // check for correct direction, if not going the right way flip round
 
 
@@ -593,7 +596,7 @@ void loop() {
 
 
 
-
+    // at junction logic
     else if (passedJunc == false) { // if at a junction
 
       //Serial.println("at junc loop");
@@ -611,6 +614,8 @@ void loop() {
         if (activeSensors < 3) {nodeDetected = false;}
       }
 
+      /*
+      // turning direction logic
       if (currentDir == 0 && nextPos == 1) { // if going clockwise to node 1
         motorTurn(0); // turn right at the next junction
         //Serial.println("turn right");
@@ -622,9 +627,17 @@ void loop() {
         //Serial.println("turn left");
         if (startPos == 0) { currentDir = 0; }
       }
+      */
+      
+      // if going to 1, turn the current direction at the junction
+      if (nextPos == 1) { 
+        motorTurn(currentDir);
+        if (startPos == 0) { currentDir = 0; } // if coming anti-clock from 0, change direction to left
+        else if (startPos == 4) { currentDir = 1; } // if coming anti-clock from 4, change direction to right
+      } 
 
-
-      if (startPos == 1 && (nextPos == 2 || nextPos == 4)) { // if going from node 1 to node 2 or 4
+      /*
+      else if (startPos == 1 && (nextPos == 2 || nextPos == 4)) { // if going from node 1 to node 2 or 4
         motorTurn(1); // turn left at the next junction
         //Serial.println("turn left");
         if (nextPos == 2) { currentDir = 1; }
@@ -636,6 +649,13 @@ void loop() {
         //Serial.println("turn right");
         if (nextPos == 0) { currentDir = 0; }
         else { currentDir = 0; }
+      }
+      */
+
+      // if going from 1 to other nodes
+      else if (startPos == 1) {
+        if (nextPos == 2 || nextPos == 4) { motorTurn(1); currentDir = 1; } // if going to 2 or 4, turn left and set the direction to anti clock (1)
+        else if (nextPos == 0 || nextPos == 3) { motorTurn(0); currentDir = 0; } // if going to 0 or 3, turn right and set the direction to clockwise (0)
       }
 
       passedJunc = true; // indicate that the junction has been passed
@@ -677,16 +697,17 @@ void loop() {
     else { while (1) { motorDrive(0,0); } }
   }
 */
+
   
   if (finalDrive) {
-    int DistanceValue = analogRead(distAnalogPin);
+    DistanceValue = analogRead(distAnalogPin);
     /*
     Serial.println("DistanceValue");
     Serial.println(DistanceValue);
     Serial.println("lastDist");
     Serial.println(lastDist);
     */
-    if (DistanceValue >= 1000 && lastDist >= 1000) {
+    if (DistanceValue >= 2250 && lastDist >= 2250) {
       motorDrive(0,0);
       //sendArrival(nextPos);
       while (1) {}
@@ -694,7 +715,27 @@ void loop() {
     lastDist = DistanceValue;
   }
   
-  if (activeSensors < 2) { error *= 2; }
+  if (activeSensors < 2) { error *= 2; } // if only either edge sensors active then double the error for turning
+
+  /*
+
+  if ( ((startPos == 3 && error < -4 ) || (startPos == 4 && error > 4)) && nextPos == 5) { parkingFromN34PreFDStage1 = true; } // if on the first part of the bend after node 3/4 flag stage 1
+
+  if (parkingFromN34PreFDStage1 && lineDetected && (error < 5 || error > -5)) { parkingFromN34PreFDStage1 = false; parkingFromN34PreFDStage2 = true; } // if on the straight post first part flag stage 2
+
+  if (parkingFromN34PreFDStage2 && (error > 4 || error < -4)) { // if on the last part of the big bend 
+    motorDrive(speedL, speedR);
+    delay(1000);
+    motorDrive(0,0);
+    if (startPos ==  3) { digitalWrite(motor1Phase, HIGH); digitalWrite(motor2Phase, HIGH); }
+    else { digitalWrite(motor1Phase, LOW); digitalWrite(motor2Phase, LOW); }
+    motorDrive(speedL, speedR);
+    delay(500);
+    motorDir(0);
+    finalDrive = true;
+
+  }
+  */
 
   //find required correction and set each wheel speed
   int correction = error * TURN_GAIN;
