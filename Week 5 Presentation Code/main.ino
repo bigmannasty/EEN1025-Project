@@ -1,6 +1,6 @@
 #include <WiFi.h>
 // set up the weightings for each sensor
-const int weights[5] = { -3, -1, 0, 1, 3 };
+const int weights[5] = { -2, -1, 0, 1, 2 };
 
 
 
@@ -19,7 +19,7 @@ const int motor2Phase = 40;
 
 // Added these global variables
 String route = "";  // <--- ADDED: Store the route received from GET
-int routeList[] = {0, 3, 2, 5};
+int routeList[] = {0, 4, 0, 5};
 int position = 0;  // <--- ADDED: Track current position index
 bool routeCompleted = false;  // <--- ADDED: Flag for route completion
 
@@ -49,7 +49,7 @@ int nextPos = 0;
 //Fastest speed and turn_gain mobot can have before errors
 const int speedR = 255;
 const int speedL = int(speedR * 0.95);
-const int TURN_GAIN = 80;
+const int TURN_GAIN = 50;
 
 int currentDir = 1; // 0 CW    1 ACW
 
@@ -560,8 +560,8 @@ void loop() {
           } 
           
           else if (currentDir == 0) { 
-            if (routeList[currentRouteNodeIndex - 1] == 0) { motorTurn(0); }
-            else { motorTurn(1); }
+            if (routeList[currentRouteNodeIndex - 1] == 0) { motorTurn(1); }
+            else { motorTurn(0); }
           }
 
         }
@@ -694,11 +694,14 @@ void loop() {
     lastDist = DistanceValue;
   }
   
+  if (activeSensors < 2) { error *= 2; }
 
   //find required correction and set each wheel speed
   int correction = error * TURN_GAIN;
   int leftSpeed = speedL;
   int rightSpeed = speedR;
+
+  
 
 
   if (!lineDetected && !finalDrive) {
