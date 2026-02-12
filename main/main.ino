@@ -1,4 +1,13 @@
 #include <WiFi.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+BLECharacteristic *pCharacteristic;
+
 // set up the weightings for each sensor
 const int weights[5] = { -3, -1, 0, 1, 3 };
 
@@ -19,7 +28,7 @@ const int motor2Phase = 40;
 
 // Added these global variables
 String route = "";  // Store the route received from GET
-int routeList[] = {0, 3, 5}; // Route as an int array
+int routeList[] = {0, 0, 0, 0, 0}; // Route as an int array
 int position = 0;  // Track current position index
 bool routeCompleted = false;  // Flag for route completion
 
@@ -65,6 +74,7 @@ bool parkingFromNode1 = false; // if going 1 -> direct aka if the last main rout
 bool parkingFromN34PreFDStage1 = false; // parking from node 3 or 4 before final drive aka on the big bend 1st stage
 bool parkingFromN34PreFDStage2 = false; // parking from node 3 or 4 before final drive aka on the big bend 2nd stage
 
+bool deviceConnected = false;
 
 
 //Initialises 0s for LineSensorValues
@@ -184,6 +194,51 @@ bool distanceSense() {
     */
   }
   return false;
+}
+
+
+//Bluetooth Stuff
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      deviceConnected = true;
+      Serial.println("");
+      Serial.println("Bluetooth Connected!");
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+      deviceConnected = false;
+      Serial.println("");
+      Serial.println("Phone Disconnected. Restarting Advertising...");
+      pServer->getAdvertising()->start(); // Allow other devices to find it again
+    }
+};
+
+void bluetoothSetup() {
+  BLEDevice::init("ESP32_S3_Server");
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+
+  pServer->setCallbacks(new MyServerCallbacks());
+
+  pCharacteristic = pService->createCharacteristic(
+                      CHARACTERISTIC_UUID,
+                      BLECharacteristic::PROPERTY_READ |
+                      BLECharacteristic::PROPERTY_NOTIFY
+                    );
+
+  pService->start();
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->start();
+}
+
+void sendNode(int pos) {
+  pCharacteristic->setValue(pos);
+  pCharacteristic->notify(); // Push the new value to the client
+  Serial.println("");
+  Serial.print("Bluetooth Sent: ");
+  Serial.println(pos);
+  Serial.println("");
 }
 
 
@@ -387,7 +442,7 @@ void setup() {
   Serial.println("");
   
 
-  /*
+  
   // conncect up to wifi
   connectToWiFi();
 
@@ -405,7 +460,9 @@ void setup() {
   } else {
     nextPos = route.toInt();
   }
-*/
+
+  bluetoothSetup();
+
   // set lineDetected to false because i forgot why
   lineDetected = false;
   if (routeList[-2] == 1) { parkingFromNode1 = true; }
@@ -439,16 +496,6 @@ void loop() {
   
   if (activeSensors >= 4) nodeDetected = true; // check for node
 
-/*
-  Serial.println("next pos");
-  Serial.println(nextPos);
-  Serial.println("start pos");
-  Serial.println(startPos);
-  Serial.println("passed junction");
-  Serial.println(passedJunc);
-  Serial.println("final drive");
-  Serial.println(finalDrive);
-  */
 
 
   // node detection logic
@@ -461,7 +508,8 @@ void loop() {
       
       // condition logic for when non-junction main route nodes detected
       if (nextPos == routeList[currentRouteNodeIndex]) { // if the node youre at right now is an actual route node
-        //routeFinished = sendArrival(nextPos);
+        routeFinished = sendArrival(nextPos);
+        sendNode(nextPos);
         currentRouteNodeIndex++; // move onto the next routelist node
         startPos = nextPos; // new start node becomes the last dest node
         nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
@@ -470,8 +518,6 @@ void loop() {
         if (nextPos == 5) { // when parking up
           if (startPos != 1) { parkingFromNode1 = false; }
           
-
-          //routeFinished = sendArrival(nextPos);
         }
 
         // checking for direct node connections
@@ -709,7 +755,8 @@ void loop() {
     */
     if (DistanceValue >= 2250 && lastDist >= 2250) {
       motorDrive(0,0);
-      //sendArrival(nextPos);
+      sendArrival(nextPos);
+      sendNode(nextPos);
       while (1) {}
     }
     lastDist = DistanceValue;
