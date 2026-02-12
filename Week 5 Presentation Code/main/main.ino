@@ -19,7 +19,7 @@ const int motor2Phase = 40;
 
 // Added these global variables
 String route = "";  // Store the route received from GET
-int routeList[] = {0, 3, 5}; // Route as an int array
+int routeList[] = {0, 0, 0, 0, 0}; // Route as an int array
 int position = 0;  // Track current position index
 bool routeCompleted = false;  // Flag for route completion
 
@@ -387,7 +387,7 @@ void setup() {
   Serial.println("");
   
 
-  /*
+  
   // conncect up to wifi
   connectToWiFi();
 
@@ -405,7 +405,7 @@ void setup() {
   } else {
     nextPos = route.toInt();
   }
-*/
+
   // set lineDetected to false because i forgot why
   lineDetected = false;
   if (routeList[-2] == 1) { parkingFromNode1 = true; }
@@ -461,7 +461,7 @@ void loop() {
       
       // condition logic for when non-junction main route nodes detected
       if (nextPos == routeList[currentRouteNodeIndex]) { // if the node youre at right now is an actual route node
-        //routeFinished = sendArrival(nextPos);
+        routeFinished = sendArrival(nextPos);
         currentRouteNodeIndex++; // move onto the next routelist node
         startPos = nextPos; // new start node becomes the last dest node
         nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
@@ -470,8 +470,6 @@ void loop() {
         if (nextPos == 5) { // when parking up
           if (startPos != 1) { parkingFromNode1 = false; }
           
-
-          //routeFinished = sendArrival(nextPos);
         }
 
         // checking for direct node connections
@@ -709,7 +707,7 @@ void loop() {
     */
     if (DistanceValue >= 2250 && lastDist >= 2250) {
       motorDrive(0,0);
-      //sendArrival(nextPos);
+      sendArrival(nextPos);
       while (1) {}
     }
     lastDist = DistanceValue;
