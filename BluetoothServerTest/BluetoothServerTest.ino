@@ -6,10 +6,11 @@
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 BLECharacteristic *pCharacteristic;
+int route[] = {0, 2, 4, 3, 1, 5, 6};
 int val = 0;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   BLEDevice::init("ESP32_S3_Server");
   BLEServer *pServer = BLEDevice::createServer();
   BLEService *pService = pServer->createService(SERVICE_UUID);
@@ -29,16 +30,23 @@ void setup() {
 
 void loop() {
 
-  if (val < 6)
+  if (route[val] != 6)
   {
-    val++; 
-    pCharacteristic->setValue(val);
+    
+    pCharacteristic->setValue(route[val]);
     pCharacteristic->notify(); // Push the new value to the client
     Serial.print("Sent: ");
-    Serial.println(val);
-    delay(2000); 
+    Serial.println(route[val]);
+    delay(3000); 
+    val++; 
   }
-  else{
-    val = 0;
+
+  if (route[val] == 6) {
+    pCharacteristic->setValue(route[val]);
+    pCharacteristic->notify(); // Push the new value to the client
+    Serial.print("Sent: ");
+    Serial.println(route[val]);
+    while (1) {}
   }
+  
 }
