@@ -2,9 +2,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEServer.h>
-#include <BLE2902.h>
 #include "pitches.h"
 
 //OLED Display Variables
@@ -16,9 +13,12 @@ const short I2C_SCL = 9;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
+static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 
+static BLERemoteCharacteristic* pRemoteCharacteristic;
+static BLEAdvertisedDevice* myDevice;
+bool doConnect = false;
 
 //Pin Configurations
 const short buzzer = 12;
@@ -28,7 +28,8 @@ const short arrowX = 48;
 const short arrowY = 24;
 const short centre = 8;
 
-int route[] = {0, 2, 4, 3, 5,};
+short currNode = 0;
+short NextNode = 0;
 
 //Function to draw arrow on display
 void drawArrow32x16(int x, int y) {
@@ -55,17 +56,45 @@ void drawArrow32x16(int x, int y) {
 }
 
 //Test function without animation
-void updateUI(int nodeNo)
+void updateUI(short currNode, short nextNode)
 {
-  buzz(route[nodeNo]);
+  buzz(currNode);
   display.clearDisplay();
   display.setTextSize(7);
   drawArrow32x16(arrowX, arrowY);
   display.setCursor(4, 8);
-  display.print(route[nodeNo]);
+  display.print(currNode);
   display.setCursor(86, 8);
-  display.print(route[nodeNo+1]);
+  display.print(nextNode);
   display.display();
+}
+
+void endText()
+{
+  display.clearDisplay();
+  display.setTextSize(5);
+  display.setCursor(0, 16);
+  display.print("PARK");
+  display.display();
+}
+
+void startTextandBuzz()
+{
+  //Display
+  display.clearDisplay();
+  display.setTextSize(4);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 16);
+  display.print("START");
+
+  //Buzzer
+  tone(buzzer, NOTE_D4);
+  delay(100);
+  tone(buzzer, NOTE_C4);
+  delay(100);
+  tone(buzzer, NOTE_A5);
+  delay(100);
+  noTone(buzzer);
 }
 
 //Function to animate numbers on display
@@ -171,56 +200,36 @@ void buzz(int nodeIndex) {
   }
 }
 
-//Plays jingle to indicate starting movement
-void buzzStart() {
-
-  tone(buzzer, NOTE_D4);
-  delay(100);
-  tone(buzzer, NOTE_C4);
-  delay(100);
-  tone(buzzer, NOTE_A5);
-  delay(100);
-  noTone(buzzer);
-}
-
-static BLERemoteCharacteristic* pRemoteCharacteristic;
-static BLEAdvertisedDevice* myDevice;
-bool doConnect = false;
-
 bool deviceConnected = false;
 
-// Handles Connection and Disconnection
-class MyServerCallbacks: public BLEServerCallbacks {
-    void onConnect(BLEServer* pServer) {
-      deviceConnected = true;
-      Serial.println("Phone Connected!");
-    };
-
-    void onDisconnect(BLEServer* pServer) {
-      deviceConnected = false;
-      Serial.println("Phone Disconnected. Restarting Advertising...");
-      pServer->getAdvertising()->start(); // Allow other devices to find it again
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
+    if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID)) {
+      BLEDevice::getScan()->stop();
+      myDevice = new BLEAdvertisedDevice(advertisedDevice);
+      doConnect = true;
     }
+  }
 };
-class MyCallbacks: public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic *pCharacteristic) {
-      // Use the native BLE pointer to get the data
-      uint8_t* pData = pCharacteristic->getData();
-      size_t len = pCharacteristic->getLength();
+// Callback for when the server sends a notification
+static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, 
+                            uint8_t* pData, size_t length, bool isNotify) {
+  
+  if (currNode == 5)
+  {
+    theme();
+    endText();
+  }
+  else
+  {
+    int value = *pData; // Simple cast for a single byte/integer
+    Serial.print("Received Value: ");
+    Serial.println(value);
+    updateUI(currNode, value);
+    currNode = value;
+  }
+}
 
-      if (len > 0) {
-        // Convert the raw data to a standard string
-        std::string value((char*)pData, len);
-
-        int nodeNo = atoi(value.c_str());
-        Serial.print("Current Node: ");
-        Serial.println(route[nodeNo]);
-        // Convert string to integer
-        updateUI(nodeNo);
-        
-      }
-    }
-};
 void setup() {
   Serial.begin(115200);
 
@@ -231,45 +240,28 @@ void setup() {
     Serial.println("SSD1306 allocation failed");
     while (true);
   }
-  display.clearDisplay();
-  display.setTextSize(4);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 16);
-  display.print("START");
+  startTextandBuzz();
+  buzzStart();
   display.display();
   BLEDevice::init("DCU-SAUR");
-
-  BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks()); // Set the server callbacks
-
-  BLEService *pService = pServer->createService(SERVICE_UUID);
-
-  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
-                                         CHARACTERISTIC_UUID,
-                                         BLECharacteristic::PROPERTY_READ |
-                                         BLECharacteristic::PROPERTY_WRITE |
-                                         BLECharacteristic::PROPERTY_NOTIFY
-                                       );
-
-  pCharacteristic->setCallbacks(new MyCallbacks());
-  
-  // Add a Descriptor (required by some phones for stable connections)
-  pCharacteristic->addDescriptor(new BLE2902());
-
-  pService->start();
-
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(true);
-  
-  // These specific intervals help iOS and Android "trust" the connection
-  pAdvertising->setMinPreferred(0x06);  
-  pAdvertising->setMaxPreferred(0x12);
-  
-  BLEDevice::startAdvertising();
-  Serial.println("Waiting for connection...");
+  BLEScan* pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true);
+  pBLEScan->start(5, false);
 }
 
 void loop() {
-
+  if (doConnect) {
+    BLEClient* pClient = BLEDevice::createClient();
+    pClient->connect(myDevice);
+    BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
+    if (pRemoteService != nullptr) {
+      pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+      if (pRemoteCharacteristic != nullptr && pRemoteCharacteristic->canNotify()) {
+        pRemoteCharacteristic->registerForNotify(notifyCallback);
+      }
+    }
+    doConnect = false;
+  }
+  delay(1000);
 }
