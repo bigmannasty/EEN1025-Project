@@ -55,7 +55,7 @@ void drawArrow32x16(int x, int y) {
   );
 }
 
-//Test function without animation
+
 void updateUI(short currNode, short nextNode)
 {
   buzz(currNode);
@@ -68,51 +68,22 @@ void updateUI(short currNode, short nextNode)
   display.print(nextNode);
   display.display();
 }
-
-void endText()
-{
-  display.clearDisplay();
-  display.setTextSize(5);
-  display.setCursor(0, 16);
-  display.print("PARK");
-  display.display();
-}
-
-void startTextandBuzz()
-{
-  //Display
-  display.clearDisplay();
-  display.setTextSize(4);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 16);
-  display.print("START");
-
-  //Buzzer
-  tone(buzzer, NOTE_D4);
-  delay(100);
-  tone(buzzer, NOTE_C4);
-  delay(100);
-  tone(buzzer, NOTE_A5);
-  delay(100);
-  noTone(buzzer);
-}
-
-//Function to animate numbers on display
 /*
-void updateUI(const short route[],short node) {
-  buzz(node);
+void updateUI(short currNode, short nextNode)
+{
+  buzz(currNode);
   short scrollVertical = 8;
   while (scrollVertical >= -64)
   {
     display.setTextSize(7);
     drawArrow32x16(arrowX, arrowY);
     display.setCursor(4, scrollVertical);
-    display.print(route[node]);
+    display.print(currNode);
     display.setCursor(86, scrollVertical);
-    display.print(route[node+1]);
+    display.print(nextNode);
     display.display();
-    delay(5);
-    scrollVertical -= 2;     
+    delay(1);
+    scrollVertical -= 4;     
     display.clearDisplay();
   }
   scrollVertical = 64;
@@ -120,19 +91,21 @@ void updateUI(const short route[],short node) {
   {
     drawArrow32x16(arrowX, arrowY);
     display.setCursor(4, scrollVertical);
-    display.print(route[node+1]);
+    display.print(currNode);
     display.setCursor(86, scrollVertical);
-    display.print(route[node+2]);
+    display.print(nextNode);
     display.display();
-    delay(5);
-    scrollVertical -= 2;     
+    delay(1);
+    scrollVertical -= 4;     
     display.clearDisplay();
   }
+
 }
 */
 
-//Function plays Jurrasic Park Theme on buzzer
-void theme() {
+void endTextandTheme()
+{
+  //Jurrasic Park Theme
   tone(buzzer, NOTE_C5);  //C
   delay(250);
   tone(buzzer, NOTE_B5);  //B
@@ -186,7 +159,67 @@ void theme() {
 
   noTone(buzzer);
 
+  //Display
+  display.clearDisplay();
+  display.setTextSize(5);
+  display.setCursor(0, 16);
+  display.print("PARK");
+  display.display();
 }
+
+void startTextandBuzz()
+{
+  //Display
+  display.clearDisplay();
+  display.setTextSize(4);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 16);
+  display.print("START");
+  display.display();
+
+  //Buzzer
+  tone(buzzer, NOTE_D4);
+  delay(100);
+  tone(buzzer, NOTE_C4);
+  delay(100);
+  tone(buzzer, NOTE_A5);
+  delay(100);
+  noTone(buzzer);
+}
+
+//Function to animate numbers on display
+/*
+void updateUI(const short route[],short node) {
+  buzz(node);
+  short scrollVertical = 8;
+  while (scrollVertical >= -64)
+  {
+    display.setTextSize(7);
+    drawArrow32x16(arrowX, arrowY);
+    display.setCursor(4, scrollVertical);
+    display.print(route[node]);
+    display.setCursor(86, scrollVertical);
+    display.print(route[node+1]);
+    display.display();
+    delay(5);
+    scrollVertical -= 2;     
+    display.clearDisplay();
+  }
+  scrollVertical = 64;
+  while (scrollVertical >= 8)
+  {
+    drawArrow32x16(arrowX, arrowY);
+    display.setCursor(4, scrollVertical);
+    display.print(route[node+1]);
+    display.setCursor(86, scrollVertical);
+    display.print(route[node+2]);
+    display.display();
+    delay(5);
+    scrollVertical -= 2;     
+    display.clearDisplay();
+  }
+}
+*/
 
 //Function that buzzes for each node passed
 void buzz(int nodeIndex) {
@@ -199,8 +232,6 @@ void buzz(int nodeIndex) {
     noTone(buzzer);
   }
 }
-
-bool deviceConnected = false;
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -215,19 +246,18 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, 
                             uint8_t* pData, size_t length, bool isNotify) {
   
-  if (currNode == 5)
-  {
-    theme();
-    endText();
-  }
-  else
-  {
     int value = *pData; // Simple cast for a single byte/integer
     Serial.print("Received Value: ");
     Serial.println(value);
-    updateUI(currNode, value);
-    currNode = value;
-  }
+    if (value != 0)
+    {
+      if (value == 5)
+      {
+        endTextandTheme;
+      }
+      updateUI(currNode, value);
+      currNode = value;
+    }
 }
 
 void setup() {
@@ -241,8 +271,6 @@ void setup() {
     while (true);
   }
   startTextandBuzz();
-  buzzStart();
-  display.display();
   BLEDevice::init("DCU-SAUR");
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());

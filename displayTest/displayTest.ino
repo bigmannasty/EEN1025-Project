@@ -68,19 +68,19 @@ const short arrowY = 24;
 
 const short centre = 8;
 
-void updateUI(const short route[],short node) {
+void updateUI(short node) {
   short scrollVertical = 8;
   while (scrollVertical >= -64)
   {
     display.setTextSize(7);
     drawArrow32x16(arrowX, arrowY);
     display.setCursor(4, scrollVertical);
-    display.print(route[node]);
+    display.print(node);
     display.setCursor(86, scrollVertical);
-    display.print(route[node+1]);
+    display.print(node);
     display.display();
-    delay(5);
-    scrollVertical -= 2;     
+    delay(1);
+    scrollVertical -= 4;     
     display.clearDisplay();
   }
   scrollVertical = 64;
@@ -88,59 +88,22 @@ void updateUI(const short route[],short node) {
   {
     drawArrow32x16(arrowX, arrowY);
     display.setCursor(4, scrollVertical);
-    display.print(route[node+1]);
+    display.print(node);
     display.setCursor(86, scrollVertical);
-    display.print(route[node+2]);
+    display.print(node);
     display.display();
-    delay(5);
-    scrollVertical -= 2;     
+    delay(1);
+    scrollVertical -= 4;     
     display.clearDisplay();
   }
 }
 
-
-void playSound(int number)
-{
-  switch (number) {
-    case 1:
-      break;
-    case 2:
-      break;
-    case 3:
-      break;
-    case 4:
-      break;
-    case 5:
-      break;
-
-  }
-} 
 void loop() {
 
-  int reading = digitalRead(button);
-
-  if (reading != lastState)
+  for (int i = 0; i < 5; i++)
   {
-    lastDebounceTime = millis();
-  }
-
-  if ((millis() - lastDebounceTime) > debounceDelay)
-  {
-      if (reading != buttonState)
-      {
-          buttonState = reading;
-      }
-  }
-  if (node>3)
-  {
-    
-  }
-  lastState = reading;
-  if (lastState == HIGH)
-  {
-    node++;
-    updateUI(route, node);
-    
+    updateUI(i);
+    delay(150);
   }
 }
 /*
