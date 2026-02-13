@@ -50,7 +50,7 @@ bool parkingFromN34PreFDStage2 = false; // parking from node 3 or 4 before final
 */
 
 
-
+bool returnToStart = false; // flag for when returning to a start node after detecting an obstacle
 
 
 
@@ -141,7 +141,7 @@ void loop() {
     motorDrive(0,0); // stop!!
     delay(50);
 
-    if (passedJunc == true) { // if node is not a junction
+    if (passedJunc == true && !returnToStart) { // if node is not a junction
       
       // condition logic for when non-junction main route nodes detected
       if (nextPos == routeList[currentRouteNodeIndex]) { // if the node youre at right now is an actual route node
@@ -159,13 +159,31 @@ void loop() {
 
         // checking for direct node connections
         if (nodes[startPos][nextPos] == 0 && nextPos != 5) { // if theres no direct connection between the 2 nodes
-          if (startPos == 0 || startPos == 3) { nextPos = nodePathRank03[currentNodeRank]; } // if going 0 -> 3 or vice versa use the 1st ranking
-          else { nextPos = nodePathRank24[currentNodeRank]; } // if going 2 -> 4 or vice versa use the 2nd ranking
+          
+          if (startPos == 0 || startPos == 3) { // if going 0 -> 3 or vice versa use the 1st ranking
+            currentNodeRank = 0;
+            while (nodes[startPos][nextPos] == 0) {
+              nextPos = nodePathRank03[currentNodeRank];
+              if (nodes[startPos][nextPos] == 0) { currentNodeRank++; }
+            }
+          } 
+          
+          else if (startPos == 2 || startPos == 4) {  // if going 2 -> 4 or vice versa use the 2nd ranking
+            currentNodeRank = 0;
+            while (nodes[startPos][nextPos] == 0) {
+              nextPos = nodePathRank24[currentNodeRank];
+              if (nodes[startPos][nextPos] == 0) { currentNodeRank++; }
+            }
+          }
+
+          else if (startPos == 1) {
+
+          }
         }
         
         passedJunc = false; // reset the junction var
         motorDrive(speedL, speedR); // get that jawn movin
-        nodeDecLoop();
+        nodeDecLoop(); // go til off node
 
         //Serial.println("main route loop");
 
@@ -231,6 +249,11 @@ void loop() {
 
     }
 
+    // IN THE CASE AN OBS WAS DETECTED DISREGARD THE NEXT NODE SINCE ITS JUST GONNA BE STARTPOS
+    else if (passedJunc == true && returnToStart) {
+      returnToStart = true;
+    }
+
 
 
     // at junction logic
@@ -281,7 +304,6 @@ void loop() {
   }
   
 
-  //if (distanceSense()) { obstacleDetected = true; }
 
 /*
   //turn-around at an obstacle
@@ -293,6 +315,71 @@ void loop() {
     else { while (1) { motorDrive(0,0); } }
   }
 */
+
+  // OBSTACLE DETECTION CONDITIONS
+  if (obstacleDetected) {
+    motorDrive(0,0);
+    if ( ( (startPos == 0 || startPos == 3) && currentDir == 0 ) || ( (startPos == 2 || startPos == 4) && currentDir == 1) ) { // obstacle on the straights 0/4 or 2/3
+      nodes[startPos][nextPos] = 0; // set node connection to 0 denoting that there is no direct connection
+      nodes[nextPos][startPos] = 0;
+      returnToStart = true;
+      if (nodes[startPos][1] == 1) { nextPos = 1; }
+      else {
+        for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
+          nextPos = nodes[startPos][i];
+        }
+      }
+    }
+
+    else if (startPos != 1) { // IF GOING FROM A NORMAL  NODE
+      if (startPos == 0 || startPos == 2) { nodes[0][2] = 0; nodes[2][0] = 0; } // cancel connection between mirrors 0/2
+      else if (startPos == 3 || startPos == 4) { nodes[3][4] = 0; nodes[4][3] = 0; } // cancel connection between mirrors 3/4
+
+      if (nextPos != 1) {
+        if (passedJunc == false) { // if obstacle is on a bend before a junc
+          nodes[startPos][1] = 0; // cancel start node connection to node 1
+          nodes[1][startPos] = 0;
+          returnToStart = true; // go back whence you came
+          passedJunc = true;
+
+          for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
+            nextPos = nodes[startPos][i];
+          }
+
+        }
+
+        else if (passedJunc == true) { // if obstacle is on a bend after a junc
+          nodes[nextPos][1] = 0; // cancel next node connection to node 1
+          nodes[1][nextPos] = 0;
+          
+          passedJunc = false; // you'll meet a junction again
+
+          if (nodes[startPos][1] == 1) { nextPos = 1; returnToStart = false; // do not return. }
+          else {
+            for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
+            nextPos = nodes[startPos][i];
+            }
+            returnToStart = true; // go back whence you came
+          }
+
+        }
+
+      }
+
+      else if (nextPos == 1) { // TODO FOR THIS MALARKEY
+
+      }
+
+    }
+
+
+
+    else if () { // THIS SUPPOSED TO BE IF (startPos == 1)
+
+
+    }
+    
+  }
 
   
   if (finalDrive) {
@@ -308,7 +395,10 @@ void loop() {
   
   if (activeSensors < 2) { error *= 2; } // if only either edge sensors active then double the error for turning
 
-  /*
+
+
+
+  /*  ADVANCED PARKING STUFF LEAVE FOR NOW, COME BACK LATER FOR THIS JAWN!!!!!!!!!!!!!!!!!!!!!!!
 
   if ( ((startPos == 3 && error < -4 ) || (startPos == 4 && error > 4)) && nextPos == 5) { parkingFromN34PreFDStage1 = true; } // if on the first part of the bend after node 3/4 flag stage 1
 
