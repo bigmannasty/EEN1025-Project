@@ -1,12 +1,12 @@
 int AnalogValue[5]; //intialise 0s
 int AnalogPin[5] = { 4, 5, 6, 7, 15 };  // keep 8 free for tone O/P music
 
-
-/*
 //initialise the optical distance sensor values
-int DistanceValue = 0;
-int distAnalogPin = 16;
-*/
+int Distance1Value = 0;
+int distAnalog1Pin = 16;
+
+int Distance2Value = 0;
+int distAnalog2Pin = 17;
 
 //Initialisation of pins to control motor
 int motor1PWM = 37;
@@ -18,8 +18,8 @@ int motor2Phase = 40;
 const int WHITE_THRESHOLD = 500;
 
 //Fastest speed and turn_gain mobot can have before errors
-const int speedL = 242;
-const int speedR = 255;
+int speedL = 200;
+int speedR = 255;
 const int TURN_GAIN = 110;
 
 void setup() {
@@ -72,52 +72,18 @@ int weights[5] = {-2, -1, 0, 1, 2}; // set up the weightings gor each sensor
 int correction; // corection var
 bool obstacleDetected; //distance sense boolean
 int activeSensors; //var for detecting nodes
-bool nodeDetected = false;
-
 
 void loop() {
 
-  /*
   //check distance sensor
-  DistanceValue = analogRead(distAnalogPin);
-  Serial.print("Distance:");
-  Serial.print(" ");
-  Serial.print(DistanceValue);
-  Serial.println("");
-  if (DistanceValue >= 1000) {
-    motorDrive(0,0);
-    obstacleDetected = true;
-    while (obstacleDetected) {
-      DistanceValue = analogRead(distAnalogPin);
-      if (DistanceValue < 2000) obstacleDetected = false;
-    }
+  Distance1Value = analogRead(distAnalog1Pin);
+  Distance2Value = analogRead(distAnalog2Pin);
+  if ((Distance1Value >= 1500) && (Distance2Value >= 1500)) {
+    speedL = 0;
+    speedR = 0;
   }
-  */
 
   motorDir(0); //set motor direction to forward
-
-
-  /*
-
-  if (duration <= 600) {
-    motorDrive(0,0);
-    obstacleDetected = true;
-    while (obstacleDetected) {
-      motorDrive(0,0);
-      sonicSensorTrig();
-      duration = pulseIn(echoPin, HIGH, 30000);
-      if (duration != 0) { distanceCm = (duration * 0.0343f) / 2.0f; }
-      Serial.print("Duration: ");
-      Serial.print(duration, 1);
-      Serial.println(" ");
-      if (duration > 800) { obstacleDetected = false; }
-      delay(200);
-    }
-  }
-  //}
-
-  */
-  
 
   //intialise error and line detect vars
   int error = 0;
@@ -133,28 +99,7 @@ void loop() {
       activeSensors++;
       if (i == 2) {lineDetected = true;}
     }
-  }
-
-  if (activeSensors >= 4) nodeDetected = true; //checking for node
-  
-/*
-  //turn-around on node loop
-  if (nodeDetected = true) {
-    motorDrive(100,100);//move forward a bit before turn
-    delay(50);
-    motorTurn(0);
-    delay(500);
-    lineDetected = false;
-    //while mid sensor isnt on line, keep on turnin
-    while (!lineDetected) {
-      int midSensor = analogRead(AnalogPin[2]);
-      if (midSensor <= WHITE_THRESHOLD) lineDetected = true;
-      motorTurn(0);
-    }
-  }
-  */
-  
-
+  }  
   //find required correction and set each wheel speed
   correction = error * TURN_GAIN;
   int leftSpeed = speedL;
