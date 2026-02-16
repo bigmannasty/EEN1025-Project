@@ -1,69 +1,63 @@
 #include "pitches.h"
 
-
-
 const int buzzer = 12;
 
+// Use 0 to represent noTone()
 
-void theme() {
-  // put your main code here, to run repeatedly:
+// I included 0 at the start of the arrays as the playTheme() function skips past the first note, I basically moved first note to second note.
+int themeMelody[] = {
+  0,                                              
+  NOTE_C5, NOTE_B5, NOTE_C5, NOTE_G4, NOTE_F4, 0,       // Phrase 1
+  NOTE_C5, NOTE_B5, NOTE_C5, NOTE_G4, NOTE_F4, 0,       // Phrase 2
+  NOTE_C5, NOTE_B5, 0, NOTE_B5, 0, NOTE_C5, 0,          // Phrase 3
+  NOTE_G4, NOTE_C4, NOTE_AS4, 0                         // Ending
+};
 
-  tone(buzzer, NOTE_C5);  //C
-  delay(250);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  tone(buzzer, NOTE_C5);  //C
-  delay(500);
-  tone(buzzer, NOTE_G4);  //G
-  delay(500);
-  tone(buzzer, NOTE_F4);  //f
-  delay(500);
+int themeDurations[] = {
+  0,                                                    
+  250, 250, 500, 500, 500, 100,                         // Phrase 1
+  250, 250, 500, 500, 500, 100,                         // Phrase 2
+  250, 250, 50, 250, 50, 750, 1,                        // Phrase 3 (1ms dummy rest)
+  500, 500, 1250, 500                                   // Ending
+};
 
-  noTone(buzzer);
-  delay(100);
+int themeNoteCount = sizeof(themeMelody) / sizeof(themeMelody[0]);
+int currentThemeNote = 0;
+unsigned long lastThemeUpdate = 0;
+bool playingTheme = false; // Set this to true to start the song
 
-  tone(buzzer, NOTE_C5);  //C
-  delay(250);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  tone(buzzer, NOTE_C5);  //C
-  delay(500);
-  tone(buzzer, NOTE_G4);  //G
-  delay(500);
-  tone(buzzer, NOTE_F4);  //f
-  delay(500);
+void playTheme() {
+  if (!playingTheme) return;
 
-  noTone(buzzer);
-  delay(100);
+  unsigned long currentMillis = millis();
 
-  tone(buzzer, NOTE_C5);  //C
-  delay(250);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  noTone(buzzer);
-  delay(50);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  noTone(buzzer);
-  delay(50);
-  tone(buzzer, NOTE_C5);  //C
-  delay(750);
+  // Check if it's time for the next note
+  if (currentMillis - lastThemeUpdate >= themeDurations[currentThemeNote]) {
+    lastThemeUpdate = currentMillis; // Reset the stopwatch
+    currentThemeNote++;              // Move to the next note index
 
-  noTone(buzzer);
-  tone(buzzer, NOTE_G4);  //G
-  delay(500);
-  tone(buzzer, NOTE_C4);  //low c
-  delay(500);
-  tone(buzzer, NOTE_AS4);  //Bflat
-  delay(1250);
-  noTone(buzzer);
-  delay(500);
+    // Check if the song is finished
+    if (currentThemeNote >= themeNoteCount) {
+      noTone(buzzer);
+      currentThemeNote = 0;
+      return;
+    }
 
-  noTone(buzzer);
-
+    // Play the current note (or silence if 0)
+    if (themeMelody[currentThemeNote] == 0) {
+      noTone(buzzer);
+    } else {
+      tone(buzzer, themeMelody[currentThemeNote]);
+    }
+  }
 }
 
+
+
+
 void buzz(int node) {
+
+  unsigned long currentMillis = millis();
 
   for (int i=0; i<node; i++)
   {
@@ -99,8 +93,9 @@ void start() {
 void setup() {
   // put your setup code here, to run once:
   pinMode(buzzer, OUTPUT);
-  start();
+  playingTheme = true;
 }
 
 void loop() {
+  playTheme();
 }

@@ -286,6 +286,7 @@ void loop() {
     doConnect = false;
   }
   delay(1000);
+  
 }
 
 /*
