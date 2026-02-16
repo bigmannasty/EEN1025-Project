@@ -18,7 +18,7 @@ int motor2Phase = 40;
 const int WHITE_THRESHOLD = 500;
 
 //Fastest speed and turn_gain mobot can have before errors
-int speedL = 200;
+int speedL = 242;
 int speedR = 255;
 const int TURN_GAIN = 110;
 
@@ -79,6 +79,7 @@ void loop() {
   Distance1Value = analogRead(distAnalog1Pin);
   Distance2Value = analogRead(distAnalog2Pin);
   if ((Distance1Value >= 1500) && (Distance2Value >= 1500)) {
+  if ((Distance1Value >= 1100) && (Distance2Value >= 1100)) {
     speedL = 0;
     speedR = 0;
   }
