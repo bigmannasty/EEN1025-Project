@@ -29,7 +29,6 @@ const short arrowY = 24;
 const short centre = 8;
 
 short currNode = 0;
-short NextNode = 0;
 
 //Function to draw arrow on display
 void drawArrow32x16(int x, int y) {
@@ -158,7 +157,6 @@ void endTextandTheme()
   delay(500);
 
   noTone(buzzer);
-
   //Display
   display.clearDisplay();
   display.setTextSize(5);
@@ -251,10 +249,6 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
     Serial.println(value);
     if (value != 0)
     {
-      if (value == 5)
-      {
-        endTextandTheme;
-      }
       updateUI(currNode, value);
       currNode = value;
     }
@@ -293,3 +287,10 @@ void loop() {
   }
   delay(1000);
 }
+
+/*
+TO DO:
+Implement stop watch instead of delays
+implement GUI for WFC
+Seperate the end text and theme, put in a parked flag so song continuously plays while going to park
+*/
