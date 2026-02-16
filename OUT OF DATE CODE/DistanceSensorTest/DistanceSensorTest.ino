@@ -1,6 +1,9 @@
 //Initialisation of distance variable and analog pin to read data from
-int DistanceValue = 0;
-int AnalogPin = 16;
+int Distance1Value = 0;
+int AnalogPin1 = 16;
+
+int Distance2Value = 0;
+int AnalogPin2 = 17;
 
 void setup() {
   Serial.begin(9600);
@@ -10,14 +13,24 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   //Sets DistanceValue to be the sensor reading
-  DistanceValue = analogRead(AnalogPin);
+  Distance1Value = analogRead(AnalogPin1);
+  Distance2Value = analogRead(AnalogPin2);
 
   //Prints reading in neat format in serial monitor
-  Serial.print("Distance:");
+  Serial.print("Distance 1:");
   Serial.print(" ");
-  Serial.print(DistanceValue);
+  Serial.print(Distance1Value);
   Serial.println("");
-  delay(600);
+  delay(200);
+  //Serial.println("--------------");
+  /*
+  Serial.print("Distance 2:");
+  Serial.print(" ");
+  
+  Serial.print(Distance2Value);
+  Serial.println("");
+  
+  */
 }
 
 /*
