@@ -2,8 +2,16 @@
 
 const int buzzer = 12;
 
-// Use 0 to represent noTone()
 
+enum buzzerState{
+  IDLE,
+  THEME,
+  BUZZ,
+};
+
+buzzerState currBuzzerState = IDLE;
+
+// Use 0 to represent noTone()
 // I included 0 at the start of the arrays as the playTheme() function skips past the first note, I basically moved first note to second note.
 int themeMelody[] = {
   0,                                              
@@ -20,12 +28,17 @@ int themeDurations[] = {
   250, 250, 50, 250, 50, 750, 1,                        // Phrase 3 (1ms dummy rest)
   500, 500, 1250, 500                                   // Ending
 };
-
 int themeNoteCount = sizeof(themeMelody) / sizeof(themeMelody[0]);
 int currentThemeNote = 0;
 unsigned long lastThemeUpdate = 0;
-bool playingTheme = false; // Set this to true to start the song
+bool playingTheme = false;
 
+void startTheme() {
+  currentThemeNote = 0;
+  lastThemeUpdate = millis();
+  currBuzzerState = THEME; // This "switches" the logic in the loop
+  playingTheme = true;
+}
 void playTheme() {
   if (!playingTheme) return;
 
@@ -53,18 +66,66 @@ void playTheme() {
 }
 
 
+//Variables for buzz count and for no. times to buzz
+int buzzCount = 0;   
+int targetBuzz = 0; 
 
-
-void buzz(int node) {
+unsigned long lastBuzzTime = 0;
+bool isBuzzing = false;
+void playBuzz() {
+  if (!isBuzzing) return;
 
   unsigned long currentMillis = millis();
+  static bool buzzerOn = false;
 
-  for (int i=0; i<node; i++)
+  //Sets interval between buzzes
+  int buzzInterval = 75;
+
+  if (currentMillis - lastBuzzTime >= buzzInterval) {
+    lastBuzzTime = currentMillis;
+
+    if (!buzzerOn) {
+      // START THE buzz
+      tone(buzzer, NOTE_C5);
+      buzzerOn = true;
+    } else {
+      // STOP THE buzz
+      noTone(buzzer);
+      buzzerOn = false;
+      buzzCount++; // We finished one full cycle
+
+      // Check if we hit the limit
+      if (buzzCount >= targetBuzz) {
+        isBuzzing = false;
+        currBuzzerState = IDLE;
+      }
+    }
+  }
+}
+
+//Sets number of time to buzz and resets variables from each node no. buzz
+void startBuzz(int count) {
+  targetBuzz = count;
+  buzzCount = 0;
+  lastBuzzTime = millis();
+  isBuzzing = true;
+  currBuzzerState = BUZZ;
+}
+
+void updateBuzzer() {
+  switch (currBuzzerState)
   {
-    delay(75);
-    tone(buzzer, NOTE_C4);
-    delay(75);
+    case IDLE:
     noTone(buzzer);
+    break;
+
+    case THEME:
+    playTheme();
+    break;
+    
+    case BUZZ:
+    playBuzz();
+    break;
   }
 }
 
@@ -93,9 +154,9 @@ void start() {
 void setup() {
   // put your setup code here, to run once:
   pinMode(buzzer, OUTPUT);
-  playingTheme = true;
+  startTheme();
 }
 
 void loop() {
-  playTheme();
+  updateBuzzer();
 }
