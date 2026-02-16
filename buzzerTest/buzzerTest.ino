@@ -7,6 +7,8 @@ enum buzzerState{
   IDLE,
   THEME,
   BUZZ,
+  START,
+  OBSTACLE
 };
 
 buzzerState currBuzzerState = IDLE;
@@ -31,17 +33,15 @@ int themeDurations[] = {
 int themeNoteCount = sizeof(themeMelody) / sizeof(themeMelody[0]);
 int currentThemeNote = 0;
 unsigned long lastThemeUpdate = 0;
-bool playingTheme = false;
 
 void startTheme() {
   currentThemeNote = 0;
   lastThemeUpdate = millis();
   currBuzzerState = THEME; // This "switches" the logic in the loop
-  playingTheme = true;
 }
-void playTheme() {
-  if (!playingTheme) return;
 
+//Will continously play theme song
+void playTheme() {
   unsigned long currentMillis = millis();
 
   // Check if it's time for the next note
@@ -71,10 +71,7 @@ int buzzCount = 0;
 int targetBuzz = 0; 
 
 unsigned long lastBuzzTime = 0;
-bool isBuzzing = false;
 void playBuzz() {
-  if (!isBuzzing) return;
-
   unsigned long currentMillis = millis();
   static bool buzzerOn = false;
 
@@ -96,7 +93,6 @@ void playBuzz() {
 
       // Check if we hit the limit
       if (buzzCount >= targetBuzz) {
-        isBuzzing = false;
         currBuzzerState = IDLE;
       }
     }
@@ -108,7 +104,6 @@ void startBuzz(int count) {
   targetBuzz = count;
   buzzCount = 0;
   lastBuzzTime = millis();
-  isBuzzing = true;
   currBuzzerState = BUZZ;
 }
 
@@ -116,16 +111,16 @@ void updateBuzzer() {
   switch (currBuzzerState)
   {
     case IDLE:
-    noTone(buzzer);
-    break;
+      noTone(buzzer);
+      break;
 
     case THEME:
-    playTheme();
-    break;
+      playTheme();
+      break;
     
     case BUZZ:
-    playBuzz();
-    break;
+      playBuzz();
+      break;
   }
 }
 
@@ -140,6 +135,20 @@ void obstacle() {
   noTone(buzzer);
 }
 
+int initTune[] = {0, NOTE_D4, NOTE_C4, NOTE_C5, 0};
+int initDuration[] = {100, 100, 100, 100, 100};
+
+/*
+void startInit(){
+  currentStartNote = 0;
+  lastThemeUpdate = millis();
+  currBuzzerState = THEME; // This "switches" the logic in the loop
+}
+
+void playInit(){
+
+}
+*/
 void start() {
 
   tone(buzzer, NOTE_D4);
@@ -154,6 +163,7 @@ void start() {
 void setup() {
   // put your setup code here, to run once:
   pinMode(buzzer, OUTPUT);
+  //startBuzz(2);
   startTheme();
 }
 
