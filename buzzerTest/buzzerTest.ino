@@ -7,7 +7,7 @@ enum buzzerState{
   IDLE,
   THEME,
   BUZZ,
-  START,
+  INIT,
   OBSTACLE
 };
 
@@ -65,7 +65,6 @@ void playTheme() {
   }
 }
 
-
 //Variables for buzz count and for no. times to buzz
 int buzzCount = 0;   
 int targetBuzz = 0; 
@@ -121,50 +120,93 @@ void updateBuzzer() {
     case BUZZ:
       playBuzz();
       break;
+
+    case INIT:
+      playInit();
+      break;
   }
 }
 
-void obstacle() {
+int obstacleTune[] = {0, NOTE_C5, NOTE_C4, NOTE_D4, 0};
+int obstacleDuration[] = {100, 100, 100, 100, 100};
 
-  tone(buzzer, NOTE_C5);
-  delay(100);
-  tone(buzzer, NOTE_C4);
-  delay(100);
-  tone(buzzer, NOTE_D4);
-  delay(100);
-  noTone(buzzer);
+int currentObstacleNote;
+unsigned long lastObstacleUpdate;
+
+int obstacleNoteCount = sizeof(obstacleTune) / sizeof(obstacleTune[0]);
+void startObstacle() {
+  currentObstacleNote = 0;
+  lastObstacleUpdate = millis();
+  currBuzzerState = OBSTACLE; // This "switches" the logic in the loop
+}
+
+void playObstacle(){
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - lastObstacleUpdate >= obstacleDuration[currentObstacleNote]) {
+    lastInitUpdate = currentMillis; // Reset the stopwatch
+    currentInitNote++;              // Move to the next note index
+
+    // Check if the song is finished
+    if (currentInitNote >= initNoteCount) {
+      noTone(buzzer);
+      currentInitNote = 0;
+      currBuzzerState = IDLE;
+      return;
+    }
+
+    // Play the current note (or silence if 0)
+    if (initTune[currentInitNote] == 0) {
+      noTone(buzzer);
+    } else {
+      tone(buzzer, initTune[currentInitNote]);
+    }
+  }
 }
 
 int initTune[] = {0, NOTE_D4, NOTE_C4, NOTE_C5, 0};
 int initDuration[] = {100, 100, 100, 100, 100};
 
-/*
-void startInit(){
-  currentStartNote = 0;
-  lastThemeUpdate = millis();
-  currBuzzerState = THEME; // This "switches" the logic in the loop
+int currentInitNote;
+unsigned long lastInitUpdate;
+
+int initNoteCount = sizeof(initTune) / sizeof(initTune[0]);
+void startInit() {
+  currentInitNote = 0;
+  lastInitUpdate = millis();
+  currBuzzerState = INIT; // This "switches" the logic in the loop
 }
 
 void playInit(){
+  unsigned long currentMillis = millis();
 
-}
-*/
-void start() {
+  if (currentMillis - lastInitUpdate >= initDuration[currentInitNote]) {
+    lastInitUpdate = currentMillis; // Reset the stopwatch
+    currentInitNote++;              // Move to the next note index
 
-  tone(buzzer, NOTE_D4);
-  delay(100);
-  tone(buzzer, NOTE_C4);
-  delay(100);
-  tone(buzzer, NOTE_C5);
-  delay(100);
-  noTone(buzzer);
+    // Check if the song is finished
+    if (currentInitNote >= initNoteCount) {
+      noTone(buzzer);
+      currentInitNote = 0;
+      currBuzzerState = IDLE;
+      return;
+    }
+
+    // Play the current note (or silence if 0)
+    if (initTune[currentInitNote] == 0) {
+      noTone(buzzer);
+    } else {
+      tone(buzzer, initTune[currentInitNote]);
+    }
+  }
 }
 
 void setup() {
   // put your setup code here, to run once:
   pinMode(buzzer, OUTPUT);
   //startBuzz(2);
-  startTheme();
+  //startTheme();
+  startInit();
 }
 
 void loop() {
