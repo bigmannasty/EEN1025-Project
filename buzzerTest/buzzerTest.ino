@@ -124,11 +124,15 @@ void updateBuzzer() {
     case INIT:
       playInit();
       break;
+
+    case OBSTACLE:
+      playObstacle();
+      break;
   }
 }
 
-int obstacleTune[] = {0, NOTE_C5, NOTE_C4, NOTE_D4, 0};
-int obstacleDuration[] = {100, 100, 100, 100, 100};
+int obstacleTune[] = {0, NOTE_C5, NOTE_C4, NOTE_D2, 0};
+int obstacleDuration[] = {100, 100, 100, 200, 100};
 
 int currentObstacleNote;
 unsigned long lastObstacleUpdate;
@@ -144,22 +148,22 @@ void playObstacle(){
   unsigned long currentMillis = millis();
 
   if (currentMillis - lastObstacleUpdate >= obstacleDuration[currentObstacleNote]) {
-    lastInitUpdate = currentMillis; // Reset the stopwatch
-    currentInitNote++;              // Move to the next note index
+    lastObstacleUpdate = currentMillis; // Reset the stopwatch
+    currentObstacleNote++;              // Move to the next note index
 
     // Check if the song is finished
-    if (currentInitNote >= initNoteCount) {
+    if (currentObstacleNote >= obstacleNoteCount) {
       noTone(buzzer);
-      currentInitNote = 0;
+      currentObstacleNote = 0;
       currBuzzerState = IDLE;
       return;
     }
 
     // Play the current note (or silence if 0)
-    if (initTune[currentInitNote] == 0) {
+    if (obstacleTune[currentObstacleNote] == 0) {
       noTone(buzzer);
     } else {
-      tone(buzzer, initTune[currentInitNote]);
+      tone(buzzer, obstacleTune[currentObstacleNote]);
     }
   }
 }
@@ -202,11 +206,11 @@ void playInit(){
 }
 
 void setup() {
-  // put your setup code here, to run once:
   pinMode(buzzer, OUTPUT);
   //startBuzz(2);
   //startTheme();
-  startInit();
+  //startInit();
+  //startObstacle();
 }
 
 void loop() {
