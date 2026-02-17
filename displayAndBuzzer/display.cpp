@@ -12,6 +12,14 @@ const short I2C_SCL = 9;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 displayState currDisplayState = IDLE;
+enum displayState{
+  TEXT,
+  IDLE,
+  NODE,
+  WFC
+};
+
+displayState currDisplayState = TEXT;
 
 short node = -1;
 const short route[] = {0, 1, 3, 2, 5};
@@ -138,6 +146,16 @@ void textUpdate() {
 void startText(bool value=false) {
   parked = value;
   currDisplayState = TEXT;
+void startText() {
+  if (currentNode == 5)
+  {
+    parked = true;
+    currDisplayState = TEXT;
+  }
+  else
+  {
+    currDisplayState = TEXT;
+  }
 }
 
 
