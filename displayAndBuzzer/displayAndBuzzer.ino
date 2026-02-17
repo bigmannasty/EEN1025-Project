@@ -4,6 +4,14 @@
 #include <display.h>
 #include "pitches.h"
 
+// Add a global state variable
+enum SystemState { 
+  WAITING_FOR_CONN,
+  CONNECTING,
+  CONNECTED
+};
+SystemState currentState = WAITING_FOR_CONN;
+
 static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
 static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 
@@ -32,7 +40,16 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
     {
       startBuzz(value);
       startNodeUpdate(value);
-      currentNode = value;
+      nextNode = value;
+    }
+    if (value == 5)
+    {
+      startTheme();
+    }
+    if (value == 5 && currentNode == 5)
+    {
+      startText(true);
+      currBuzzerState = NOBUZZ;
     }
 }
 
@@ -56,27 +73,29 @@ void setup() {
 }
 
 void loop() {
-  /*
   if (doConnect) {
+    currentState = CONNECTING;
     BLEClient* pClient = BLEDevice::createClient();
-    pClient->connect(myDevice);
-    BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
-    if (pRemoteService != nullptr) {
-      pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
-      if (pRemoteCharacteristic != nullptr && pRemoteCharacteristic->canNotify()) {
-        pRemoteCharacteristic->registerForNotify(notifyCallback);
+    
+    if (pClient->connect(myDevice)) {
+      BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
+      if (pRemoteService != nullptr) {
+        pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+        if (pRemoteCharacteristic != nullptr && pRemoteCharacteristic->canNotify()) {
+          pRemoteCharacteristic->registerForNotify(notifyCallback);
+          currentState = CONNECTED; // Successfully hooked up
+        }
       }
     }
-    doConnect = false;
+    doConnect = false; 
   }
-  delay(1000);
-  */
-  updateBuzzer();
-  updateDisplay();
-}
 
-/*
-TO DO:
-implement GUI for WFC
-Seperate the end text and theme, put in a parked flag so song continuously plays while going to park
-*/
+  // UI Rendering Logic
+  if (currentState == WAITING_FOR_CONN || currentState == CONNECTING) {
+    wfcDisplay();
+  } else {
+    updateDisplay(); // Your normal "Connected" GUI
+  }
+
+  updateBuzzer();
+}

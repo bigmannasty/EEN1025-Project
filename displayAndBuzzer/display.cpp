@@ -11,13 +11,6 @@ const short I2C_SCL = 9;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
-enum displayState{
-  TEXT,
-  IDLE,
-  NODE,
-  WFC
-};
-
 displayState currDisplayState = TEXT;
 
 short node = -1;
@@ -54,7 +47,7 @@ short scrollVertical = 8;
 const short uiInterval = 1;
 
 unsigned long lastDisplayUpdate = 0;
-short currentNode = 5;
+short currentNode = 0;
 short nextNode = 0;
 
 void nodeUpdate() {
@@ -122,8 +115,8 @@ void textUpdate() {
     display.display();
   }
 }
-void startText() {
-  if (currentNode == 5)
+void startText(bool value) {
+  if (value == true)
   {
     parked = true;
     currDisplayState = TEXT;
@@ -156,15 +149,13 @@ void updateDisplay() {
   switch(currDisplayState)
   {
     case IDLE:
+      display.clearDisplay();
       break;
     case NODE:
       nodeUpdate();
       break;
     case TEXT:
       textUpdate();
-      break;
-    case WFC:
-      wfcDisplay();
       break;
   }
 }

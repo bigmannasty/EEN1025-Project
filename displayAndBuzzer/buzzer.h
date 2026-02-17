@@ -1,6 +1,17 @@
 #ifndef buzzer_h
 #define buzzer_h
 
+enum buzzerState{
+  NOBUZZ,
+  THEME,
+  BUZZ,
+  INIT,
+  OBSTACLE
+};
+
+
+extern buzzerState currBuzzerState;
+
 extern const short buzzer;
 
 extern int themeMelody[];

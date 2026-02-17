@@ -2,15 +2,7 @@
 #include <Arduino.h>
 #include "pitches.h"
 
-enum buzzerState{
-  IDLE,
-  THEME,
-  BUZZ,
-  INIT,
-  OBSTACLE
-};
-
-buzzerState currBuzzerState = IDLE;
+buzzerState currBuzzerState = NOBUZZ;
 
 
 const short buzzer = 12;
@@ -98,7 +90,7 @@ void playBuzz() {
 
       // Check if we hit the limit
       if (buzzCount >= targetBuzz) {
-        currBuzzerState = IDLE;
+        currBuzzerState = NOBUZZ;
       }
     }
   }
@@ -115,7 +107,7 @@ void startBuzz(int count) {
 void updateBuzzer() {
   switch (currBuzzerState)
   {
-    case IDLE:
+    case NOBUZZ:
       noTone(buzzer);
       break;
 
@@ -161,7 +153,7 @@ void playObstacle(){
     if (currentObstacleNote >= obstacleNoteCount) {
       noTone(buzzer);
       currentObstacleNote = 0;
-      currBuzzerState = IDLE;
+      currBuzzerState = NOBUZZ;
       return;
     }
 
@@ -198,7 +190,7 @@ void playInit(){
     if (currentInitNote >= initNoteCount) {
       noTone(buzzer);
       currentInitNote = 0;
-      currBuzzerState = IDLE;
+      currBuzzerState = NOBUZZ;
       return;
     }
 

@@ -4,6 +4,12 @@
 #include <Adafruit_SSD1306.h>
 
 
+enum displayState{
+  TEXT,
+  IDLE,
+  NODE,
+};
+
 extern const short SCREEN_WIDTH;
 extern const short SCREEN_HEIGHT;
 extern const short I2C_SDA;
@@ -21,9 +27,10 @@ extern const short arrowX;
 extern const short arrowY;
 extern const short centre;
 extern short scrollVertical;
-extern const int uiInterval;
+extern const short uiInterval;
 
 void updateUI(short node);
+void startText(bool parked);
 
 extern unsigned long lastDisplayUpdate;
 
@@ -36,5 +43,7 @@ extern bool parked;
 
 void textUpdate();
 void updateDisplay();
+
+void wfcDisplay();
 
 #endif
