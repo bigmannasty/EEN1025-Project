@@ -11,7 +11,7 @@ const short I2C_SCL = 9;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
-displayState currDisplayState = TEXT;
+displayState currDisplayState = IDLE;
 
 short node = -1;
 const short route[] = {0, 1, 3, 2, 5};
@@ -51,6 +51,25 @@ short currentNode = 0;
 short nextNode = 0;
 
 void nodeUpdate() {
+  //Draws arrow
+  display.clearDisplay();
+  drawArrow32x16(arrowX, arrowY);
+
+  //Draws Static Text
+  display.setTextSize(7);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(4, scrollVertical);
+  display.print(currentNode);
+  display.setCursor(86, scrollVertical);
+  display.print(nextNode);
+  display.display();
+
+  currentNode = nextNode;
+  currDisplayState = IDLE;
+}
+
+/*
+void nodeUpdate() {
   unsigned long currentMillis = millis();
 
   //Check if enough time has elapsed to update animation
@@ -77,19 +96,20 @@ void nodeUpdate() {
     //If scrolled to the top, jump to the bottom
     if (scrollVertical < -64 && scrollVertical > -100) {
       scrollVertical = 64;
+      //currentNode = nextNode;
     }
 
     if (scrollVertical == 8) {
       currDisplayState = IDLE;
-      currentNode = nextNode;
     }
   }
 }
+*/
 
 void startNodeUpdate(short node) {
-  nextNode = node;
   scrollVertical = 4;
   lastDisplayUpdate = millis();
+  nextNode = node;
   currDisplayState = NODE;
 }
 
@@ -115,21 +135,12 @@ void textUpdate() {
     display.display();
   }
 }
-void startText(bool value) {
-  if (value == true)
-  {
-    parked = true;
-    currDisplayState = TEXT;
-  }
-  else
-  {
-    currDisplayState = TEXT;
-  }
+void startText(bool value=false) {
+  parked = value;
+  currDisplayState = TEXT;
 }
 
-void startWFC() {
 
-}
 
 void wfcDisplay() {
   display.clearDisplay();
