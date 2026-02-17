@@ -1,17 +1,23 @@
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include <BLEDevice.h>
+#include <buzzer.h>
+#include <display.h>
 #include "pitches.h"
 
-//OLED Display Variables
-#define OLED_ADDR 0x3C
-const short SCREEN_WIDTH = 128;
-const short SCREEN_HEIGHT = 64;
-const short I2C_SDA = 8;
-const short I2C_SCL = 9;
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
+/*
+TO DO:
+Make two different states for animation (one for scrolling up, other for resetting pos, updating nodes and scrolling up)
+*/
 
+
+
+// Add a global state variable
+enum SystemState { 
+  WAITING_FOR_CONN,
+  CONNECTING,
+  CONNECTED
+};
+SystemState currentState = WAITING_FOR_CONN;
 
 static BLEUUID serviceUUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
 static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
@@ -19,188 +25,6 @@ static BLEUUID charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 static BLERemoteCharacteristic* pRemoteCharacteristic;
 static BLEAdvertisedDevice* myDevice;
 bool doConnect = false;
-
-//Pin Configurations
-const short buzzer = 12;
-
-//Variables for Display
-const short arrowX = 48;
-const short arrowY = 24;
-const short centre = 8;
-
-short currNode = 0;
-short NextNode = 0;
-
-//Function to draw arrow on display
-void drawArrow32x16(int x, int y) {
-  const short width = 32;
-  const short height = 16;
-
-  const short shaftLength = 20;      // body length
-  const short shaftThickness = 6;    // thickness of shaft
-
-  const short centerY = y + height / 2;
-
-  // Shaft (rectangle)
-  display.fillRect(x, centerY - shaftThickness / 2,
-                   shaftLength, shaftThickness,
-                   SSD1306_WHITE);
-
-  // Arrow head (triangle)
-  display.fillTriangle(
-    x + shaftLength, y,              // top back of head
-    x + shaftLength, y + height,     // bottom back of head
-    x + width, centerY,              // tip
-    SSD1306_WHITE
-  );
-}
-
-//Test function without animation
-void updateUI(short currNode, short nextNode)
-{
-  buzz(currNode);
-  display.clearDisplay();
-  display.setTextSize(7);
-  drawArrow32x16(arrowX, arrowY);
-  display.setCursor(4, 8);
-  display.print(currNode);
-  display.setCursor(86, 8);
-  display.print(nextNode);
-  display.display();
-}
-
-void endText()
-{
-  display.clearDisplay();
-  display.setTextSize(5);
-  display.setCursor(0, 16);
-  display.print("PARK");
-  display.display();
-}
-
-void startTextandBuzz()
-{
-  //Display
-  display.clearDisplay();
-  display.setTextSize(4);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 16);
-  display.print("START");
-
-  //Buzzer
-  tone(buzzer, NOTE_D4);
-  delay(100);
-  tone(buzzer, NOTE_C4);
-  delay(100);
-  tone(buzzer, NOTE_A5);
-  delay(100);
-  noTone(buzzer);
-}
-
-//Function to animate numbers on display
-/*
-void updateUI(const short route[],short node) {
-  buzz(node);
-  short scrollVertical = 8;
-  while (scrollVertical >= -64)
-  {
-    display.setTextSize(7);
-    drawArrow32x16(arrowX, arrowY);
-    display.setCursor(4, scrollVertical);
-    display.print(route[node]);
-    display.setCursor(86, scrollVertical);
-    display.print(route[node+1]);
-    display.display();
-    delay(5);
-    scrollVertical -= 2;     
-    display.clearDisplay();
-  }
-  scrollVertical = 64;
-  while (scrollVertical >= 8)
-  {
-    drawArrow32x16(arrowX, arrowY);
-    display.setCursor(4, scrollVertical);
-    display.print(route[node+1]);
-    display.setCursor(86, scrollVertical);
-    display.print(route[node+2]);
-    display.display();
-    delay(5);
-    scrollVertical -= 2;     
-    display.clearDisplay();
-  }
-}
-*/
-
-//Function plays Jurrasic Park Theme on buzzer
-void theme() {
-  tone(buzzer, NOTE_C5);  //C
-  delay(250);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  tone(buzzer, NOTE_C5);  //C
-  delay(500);
-  tone(buzzer, NOTE_G4);  //G
-  delay(500);
-  tone(buzzer, NOTE_F4);  //f
-  delay(500);
-
-  noTone(buzzer);
-  delay(100);
-
-  tone(buzzer, NOTE_C5);  //C
-  delay(250);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  tone(buzzer, NOTE_C5);  //C
-  delay(500);
-  tone(buzzer, NOTE_G4);  //G
-  delay(500);
-  tone(buzzer, NOTE_F4);  //f
-  delay(500);
-
-  noTone(buzzer);
-  delay(100);
-
-  tone(buzzer, NOTE_C5);  //C
-  delay(250);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  noTone(buzzer);
-  delay(50);
-  tone(buzzer, NOTE_B5);  //B
-  delay(250);
-  noTone(buzzer);
-  delay(50);
-  tone(buzzer, NOTE_C5);  //C
-  delay(750);
-
-  noTone(buzzer);
-  tone(buzzer, NOTE_G4);  //G
-  delay(500);
-  tone(buzzer, NOTE_C4);  //low c
-  delay(500);
-  tone(buzzer, NOTE_AS4);  //Bflat
-  delay(1250);
-  noTone(buzzer);
-  delay(500);
-
-  noTone(buzzer);
-
-}
-
-//Function that buzzes for each node passed
-void buzz(int nodeIndex) {
-
-  for (int i=0; i<nodeIndex; i++)
-  {
-    delay(75);
-    tone(buzzer, NOTE_A3);
-    delay(75);
-    noTone(buzzer);
-  }
-}
-
-bool deviceConnected = false;
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -211,23 +35,29 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     }
   }
 };
+
 // Callback for when the server sends a notification
 static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, 
                             uint8_t* pData, size_t length, bool isNotify) {
   
-  if (currNode == 5)
-  {
-    theme();
-    endText();
-  }
-  else
-  {
-    int value = *pData; // Simple cast for a single byte/integer
-    Serial.print("Received Value: ");
-    Serial.println(value);
-    updateUI(currNode, value);
-    currNode = value;
-  }
+    int node = *pData; // Simple cast for a single byte/integer
+    
+    Serial.println(node);
+    if (node != 0 || node != 5)
+    {
+      startBuzz(node);
+      startNodeUpdate(node);
+    }
+    if (node == 5)
+    {
+      startTheme();
+    }
+    if (node == 5 && currentNode == 5)
+    {
+      parked = true;
+      currDisplayState = TEXT;
+      currBuzzerState = NOBUZZ;
+    }
 }
 
 void setup() {
@@ -240,28 +70,42 @@ void setup() {
     Serial.println("SSD1306 allocation failed");
     while (true);
   }
-  startTextandBuzz();
-  buzzStart();
-  display.display();
+  textUpdate();
+  startInit();
   BLEDevice::init("DCU-SAUR");
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setActiveScan(true);
   pBLEScan->start(5, false);
+  display.clearDisplay();
 }
 
 void loop() {
   if (doConnect) {
+    currentState = CONNECTING;
     BLEClient* pClient = BLEDevice::createClient();
-    pClient->connect(myDevice);
-    BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
-    if (pRemoteService != nullptr) {
-      pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
-      if (pRemoteCharacteristic != nullptr && pRemoteCharacteristic->canNotify()) {
-        pRemoteCharacteristic->registerForNotify(notifyCallback);
+    
+    if (pClient->connect(myDevice)) {
+      BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
+      if (pRemoteService != nullptr) {
+        pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+        if (pRemoteCharacteristic != nullptr && pRemoteCharacteristic->canNotify()) {
+          pRemoteCharacteristic->registerForNotify(notifyCallback);
+          currentState = CONNECTED; // Successfully hooked up
+          currDisplayState = TEXT;
+        }
       }
     }
-    doConnect = false;
+    doConnect = false; 
   }
-  delay(1000);
+
+  // UI Rendering Logic
+  if (currentState == WAITING_FOR_CONN || currentState == CONNECTING) {
+    wfcDisplay();
+  } else {
+    updateDisplay();
+    }
+  
+  
+  updateBuzzer();
 }
