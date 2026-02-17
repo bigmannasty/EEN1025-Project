@@ -1,7 +1,7 @@
 #include <ServerCom.h>
 #include <Motor.h>
 #include <Bluetooth.h>
-
+#include <SonicSensor.h>
 
 
 // set up the weightings for each sensor
@@ -10,11 +10,14 @@ const int weights[5] = { -3, -1, 0, 1, 3 };
 const int TURN_GAIN = 50;
 
 //initialise the distance sensor values
-const int distAnalogPin = 16;
+//const int distAnalogPin = 16;
 int DistanceValue = 0;
 int lastDist = 0;
 bool finalDrive = false;
 
+
+//const int trigPin = 16;
+//const int echoPin = 17;
 
 
 //node and wight arrays
@@ -51,8 +54,6 @@ bool parkingFromN34PreFDStage2 = false; // parking from node 3 or 4 before final
 
 
 bool returnToStart = false; // flag for when returning to a start node after detecting an obstacle
-
-
 
 
 
@@ -103,6 +104,8 @@ void setup() {
   // set lineDetected to false because i forgot why
   lineDetected = false;
   if (routeList[-2] == 1) { parkingFromNode1 = true; }
+
+  pinSetup();
   
 }
 
@@ -132,7 +135,6 @@ void loop() {
 
   
   if (activeSensors >= 4) nodeDetected = true; // check for node
-
 
 
   // node detection logic
@@ -335,38 +337,44 @@ void loop() {
       if (startPos == 0 || startPos == 2) { nodes[0][2] = 0; nodes[2][0] = 0; } // cancel connection between mirrors 0/2
       else if (startPos == 3 || startPos == 4) { nodes[3][4] = 0; nodes[4][3] = 0; } // cancel connection between mirrors 3/4
 
-      if (nextPos != 1) {
-        if (passedJunc == false) { // if obstacle is on a bend before a junc
-          nodes[startPos][1] = 0; // cancel start node connection to node 1
-          nodes[1][startPos] = 0;
-          returnToStart = true; // go back whence you came
-          passedJunc = true;
+      if (passedJunc == false) { // if obstacle is on a bend before a junc
+        nodes[startPos][1] = 0; // cancel start node connection to node 1
+        nodes[1][startPos] = 0;
+        returnToStart = true; // go back whence you came
+        passedJunc = true;
 
+        for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
+          nextPos = nodes[startPos][i];
+        }
+
+      }
+
+      else if (nextPos != 1) { // if obstacle is on a bend after a junc and not going 1
+         
+        nodes[nextPos][1] = 0; // cancel next node connection to node 1
+        nodes[1][nextPos] = 0;
+        
+        passedJunc = false; // you'll meet a junction again
+
+        if (nodes[startPos][1] == 1) { nextPos = 1; returnToStart = false; } // do not return. 
+        else {
           for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
-            nextPos = nodes[startPos][i];
+          nextPos = nodes[startPos][i];
           }
-
-        }
-
-        else if (passedJunc == true) { // if obstacle is on a bend after a junc
-          nodes[nextPos][1] = 0; // cancel next node connection to node 1
-          nodes[1][nextPos] = 0;
-          
-          passedJunc = false; // you'll meet a junction again
-
-          if (nodes[startPos][1] == 1) { nextPos = 1; returnToStart = false; // do not return. }
-          else {
-            for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
-            nextPos = nodes[startPos][i];
-            }
-            returnToStart = true; // go back whence you came
-          }
-
+          returnToStart = true; // go back whence you came
         }
 
       }
 
-      else if (nextPos == 1) { // TODO FOR THIS MALARKEY
+      else if (nextPos == 1) { // if obstacle is either side of 1
+        if (startPos == 0 || startPos == 2) { nodes[0][1] = 0; nodes[1][0] = 0; nodes[2][1] = 0; nodes[1][2] = 0; } // cancel connection between mirrors 0/2 and 1
+        else if (startPos == 3 || startPos == 4) { nodes[3][1] = 0; nodes[1][3] = 0; nodes[4][1] = 0; nodes[1][4] = 0; } // cancel connection between mirrors 3/4 and 1
+
+        passedJunc = false;
+        nextPos = startPos;
+        startPos = 1;
+
+
 
       }
 
@@ -374,14 +382,38 @@ void loop() {
 
 
 
-    else if () { // THIS SUPPOSED TO BE IF (startPos == 1)
+    else if (startPos == 1) { // if starting at node 1
+      if (passedJunc = false) { // if pre junctiong obstacle
+        if (currentDir == 1) { nodes[0][1] = 0; nodes[1][0] = 0; nodes[2][1] = 0; nodes[1][2] = 0; } // if going right to 0 or 2 block em off
+        else if (currentDir == 0) { nodes[3][1] = 0; nodes[1][3] = 0; nodes[4][1] = 0; nodes[1][4] = 0; } // else if going left to 3 or 4 block em off
 
+        passedJunc = true;
+        startPos = nextPos;
+        nextPos = 1;
+        
+      }
+
+      else if (passedJunc == true) {
+        nodes[1][nextPos] = 0;
+        nodes[nextPos][1] = 0;
+
+        if (nextPos == 0 || nextPos == 2) { nodes[0][2] = 0; nodes[2][0] = 0; }
+        else if (startPos == 3 || startPos == 4) { nodes[3][4] = 0; nodes[4][3] = 0; }
+
+        passedJunc == false;
+        startPos = nextPos;
+        nextPos = 1;
+        
+      }
 
     }
+
+
+    motor180();
     
   }
 
-  
+  /*
   if (finalDrive) {
     DistanceValue = analogRead(distAnalogPin);
     if (DistanceValue >= 2250 && lastDist >= 2250) {
@@ -392,6 +424,22 @@ void loop() {
     }
     lastDist = DistanceValue;
   }
+  */
+
+  if (finalDrive) {
+    trigPulse();
+    DistanceValue = distanceSense();
+    Serial.println("Dis");
+    Serial.println(DistanceValue);
+    if (DistanceValue <= 800 && DistanceValue > 300 && lastDist <= 800) {
+      motorDrive(0,0);
+      sendArrival(nextPos);
+      sendNode(nextPos);
+      while (1) {}
+    }
+    if (DistanceValue > 300) lastDist = DistanceValue;
+  }
+
   
   if (activeSensors < 2) { error *= 2; } // if only either edge sensors active then double the error for turning
 
