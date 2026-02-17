@@ -10,8 +10,6 @@ enum displayState{
   NODE,
 };
 
-extern displayState currDisplayState;
-
 extern const short SCREEN_WIDTH;
 extern const short SCREEN_HEIGHT;
 extern const short I2C_SDA;
@@ -38,7 +36,6 @@ extern unsigned long lastDisplayUpdate;
 
 extern short currentNode;
 extern short nextNode;
-
 void nodeUpdate();
 void startNodeUpdate(short node);
 
