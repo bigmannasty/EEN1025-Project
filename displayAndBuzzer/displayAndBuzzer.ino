@@ -4,13 +4,6 @@
 #include <display.h>
 #include "pitches.h"
 
-/*
-TO DO:
-Make two different states for animation (one for scrolling up, other for resetting pos, updating nodes and scrolling up)
-*/
-
-
-
 // Add a global state variable
 enum SystemState { 
   WAITING_FOR_CONN,
@@ -40,22 +33,22 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, 
                             uint8_t* pData, size_t length, bool isNotify) {
   
-    int node = *pData; // Simple cast for a single byte/integer
-    
-    Serial.println(node);
-    if (node != 0 || node != 5)
+    int value = *pData; // Simple cast for a single byte/integer
+    Serial.print("Received Value: ");
+    Serial.println(value);
+    if (value != 0)
     {
-      startBuzz(node);
-      startNodeUpdate(node);
+      startBuzz(value);
+      startNodeUpdate(value);
+      nextNode = value;
     }
-    if (node == 5)
+    if (value == 5)
     {
       startTheme();
     }
-    if (node == 5 && currentNode == 5)
+    if (value == 5 && currentNode == 5)
     {
-      parked = true;
-      currDisplayState = TEXT;
+      startText(true);
       currBuzzerState = NOBUZZ;
     }
 }
@@ -70,14 +63,13 @@ void setup() {
     Serial.println("SSD1306 allocation failed");
     while (true);
   }
-  textUpdate();
   startInit();
+  textUpdate();
   BLEDevice::init("DCU-SAUR");
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setActiveScan(true);
   pBLEScan->start(5, false);
-  display.clearDisplay();
 }
 
 void loop() {
@@ -92,7 +84,6 @@ void loop() {
         if (pRemoteCharacteristic != nullptr && pRemoteCharacteristic->canNotify()) {
           pRemoteCharacteristic->registerForNotify(notifyCallback);
           currentState = CONNECTED; // Successfully hooked up
-          currDisplayState = TEXT;
         }
       }
     }
@@ -103,9 +94,8 @@ void loop() {
   if (currentState == WAITING_FOR_CONN || currentState == CONNECTING) {
     wfcDisplay();
   } else {
-    updateDisplay();
-    }
-  
-  
+    updateDisplay(); // Your normal "Connected" GUI
+  }
+
   updateBuzzer();
 }
