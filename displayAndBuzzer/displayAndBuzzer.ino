@@ -43,7 +43,7 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
     int node = *pData; // Simple cast for a single byte/integer
     
     Serial.println(node);
-    if (node != 0 || node != 5)
+    if (node != 0)
     {
       startBuzz(node);
       startNodeUpdate(node);
