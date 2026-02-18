@@ -1,8 +1,8 @@
 #ifndef SonicSensor_h
 #define SonicSensor_h
 
-extern const int trigPin;
-extern const int echoPin;
+extern const short trigPin;
+extern const short echoPin;
 
 void pinSetup();
 

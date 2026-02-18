@@ -115,3 +115,7 @@ void loop() {
 
   updateBuzzer();
 }
+/*
+What happens in this code:
+1. Bluetooth connection is set up between this ESP32 and the 
+*/

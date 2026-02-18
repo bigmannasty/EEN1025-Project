@@ -2,9 +2,10 @@
 #include <Arduino.h>
 #include "pitches.h"
 
+//Initialises state variable to not buzz
 buzzerState currBuzzerState = NOBUZZ;
 
-
+//Pin Configuration for buzzer
 const short buzzer = 12;
 
 
@@ -25,17 +26,13 @@ int themeDurations[] = {
   250, 250, 50, 250, 50, 750, 1,                        // Phrase 3 (1ms dummy rest)
   500, 500, 1250, 500                                   // Ending
 };
-int themeNoteCount = sizeof(themeMelody) / sizeof(themeMelody[0]);
-int currentThemeNote = 0;
+short themeNoteCount = sizeof(themeMelody) / sizeof(themeMelody[0]);
+short currentThemeNote = 0;
 unsigned long lastThemeUpdate = 0;
 
-
-
-
 void startTheme() {
-  currentThemeNote = 0;
   lastThemeUpdate = millis();
-  currBuzzerState = THEME; // This "switches" the logic in the loop
+  currBuzzerState = THEME;
 }
 
 //Will continously play theme song
@@ -44,17 +41,18 @@ void playTheme() {
 
   // Check if it's time for the next note
   if (currentMillis - lastThemeUpdate >= themeDurations[currentThemeNote]) {
-    lastThemeUpdate = currentMillis; // Reset the stopwatch
-    currentThemeNote++;              // Move to the next note index
+    //Resets stopwatch and moves to next note
+    lastThemeUpdate = currentMillis;
+    currentThemeNote++;             
 
-    // Check if the song is finished
+    // If song has finished, restart to beginning
     if (currentThemeNote >= themeNoteCount) {
       noTone(buzzer);
       currentThemeNote = 0;
       return;
     }
 
-    // Play the current note (or silence if 0)
+    // Play the current note (or nothing if 0)
     if (themeMelody[currentThemeNote] == 0) {
       noTone(buzzer);
     } else {
@@ -64,8 +62,8 @@ void playTheme() {
 }
 
 //Variables for buzz count and for no. times to buzz
-int buzzCount = 0;   
-int targetBuzz = 0; 
+short buzzCount = 0;   
+short targetBuzz = 0; 
 
 unsigned long lastBuzzTime = 0;
 void playBuzz() {
@@ -73,7 +71,7 @@ void playBuzz() {
   static bool buzzerOn = false;
 
   //Sets interval between buzzes
-  int buzzInterval = 75;
+  short buzzInterval = 75;
 
   if (currentMillis - lastBuzzTime >= buzzInterval) {
     lastBuzzTime = currentMillis;
@@ -122,57 +120,16 @@ void updateBuzzer() {
     case INIT:
       playInit();
       break;
-
-    case OBSTACLE:
-      playObstacle();
-      break;
-  }
-}
-
-int obstacleTune[] = {0, NOTE_C5, NOTE_C4, NOTE_D2, 0};
-int obstacleDuration[] = {100, 100, 100, 200, 100};
-
-int currentObstacleNote;
-unsigned long lastObstacleUpdate;
-
-int obstacleNoteCount = sizeof(obstacleTune) / sizeof(obstacleTune[0]);
-void startObstacle() {
-  currentObstacleNote = 0;
-  lastObstacleUpdate = millis();
-  currBuzzerState = OBSTACLE; // This "switches" the logic in the loop
-}
-
-void playObstacle(){
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - lastObstacleUpdate >= obstacleDuration[currentObstacleNote]) {
-    lastObstacleUpdate = currentMillis; // Reset the stopwatch
-    currentObstacleNote++;              // Move to the next note index
-
-    // Check if the song is finished
-    if (currentObstacleNote >= obstacleNoteCount) {
-      noTone(buzzer);
-      currentObstacleNote = 0;
-      currBuzzerState = NOBUZZ;
-      return;
-    }
-
-    // Play the current note (or silence if 0)
-    if (obstacleTune[currentObstacleNote] == 0) {
-      noTone(buzzer);
-    } else {
-      tone(buzzer, obstacleTune[currentObstacleNote]);
-    }
   }
 }
 
 int initTune[] = {0, NOTE_D4, NOTE_C4, NOTE_C5, 0};
 int initDuration[] = {100, 100, 100, 100, 100};
 
-int currentInitNote;
+short currentInitNote;
 unsigned long lastInitUpdate;
 
-int initNoteCount = sizeof(initTune) / sizeof(initTune[0]);
+short initNoteCount = sizeof(initTune) / sizeof(initTune[0]);
 void startInit() {
   currentInitNote = 0;
   lastInitUpdate = millis();

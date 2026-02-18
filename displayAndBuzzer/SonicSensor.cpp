@@ -1,8 +1,8 @@
 #include <SonicSensor.h>
 #include <Arduino.h>
 
-const int trigPin = 16;
-const int echoPin = 17;
+const short trigPin = 16;
+const short echoPin = 17;
 
 void pinSetup() {
   pinMode(trigPin, OUTPUT);
