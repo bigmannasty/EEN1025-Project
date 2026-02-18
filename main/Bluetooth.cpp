@@ -2,6 +2,7 @@
 
 
 BLECharacteristic *pCharacteristic;
+BLECharacteristic *pPhoneChar;
 
 bool deviceConnected = false;
 
@@ -31,6 +32,12 @@ void bluetoothSetup() {
                       BLECharacteristic::PROPERTY_READ |
                       BLECharacteristic::PROPERTY_NOTIFY
                     );
+                  
+  pPhoneChar = pService->createCharacteristic(
+                      CHAR_PHONE_UUID,
+                      BLECharacteristic::PROPERTY_NOTIFY
+                    );
+  pPhoneChar->addDescriptor(new BLE2902());
 
   pService->start();
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
@@ -47,4 +54,12 @@ void sendNode(int pos) {
   Serial.println(pos);
   Serial.println("");
   */
+}
+
+//Could perform some logic so that if pos == 5, phone receives a parking notif instead of node number?
+void sendToPhone(int pos)
+{
+  String phoneMsg = "Next node:" + String(pos);
+  pPhoneChar->setValue(phoneMsg.c_str());
+  pPhoneChar->notify();
 }
