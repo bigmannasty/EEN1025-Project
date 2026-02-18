@@ -152,6 +152,7 @@ void loop() {
         startPos = nextPos; // new start node becomes the last dest node
         nextPos = routeList[currentRouteNodeIndex]; // new next node becomes the next required destination node in the route list
         sendNode(nextPos); // send nextpos to other esp
+        sendToPhone(nextPos);
         // parking node loop
 
         if (nextPos == 5) { // when parking up

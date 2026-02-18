@@ -11,6 +11,7 @@ void MyServerCallbacks::onConnect(BLEServer* pServer) {
     deviceConnected = true;
     //Serial.println("");
     //Serial.println("Bluetooth Connected!");
+    pServer->getAdvertising()->start();
 }
 
 void MyServerCallbacks::onDisconnect(BLEServer* pServer) {
@@ -35,6 +36,7 @@ void bluetoothSetup() {
                   
   pPhoneChar = pService->createCharacteristic(
                       CHAR_PHONE_UUID,
+                      BLECharacteristic::PROPERTY_READ |
                       BLECharacteristic::PROPERTY_NOTIFY
                     );
   pPhoneChar->addDescriptor(new BLE2902());
@@ -57,9 +59,19 @@ void sendNode(int pos) {
 }
 
 //Could perform some logic so that if pos == 5, phone receives a parking notif instead of node number?
-void sendToPhone(int pos)
+//String should be kept to below 23 bytes, otherwise phone will truncate msg
+void sendToPhone(int pos=0)
 {
-  String phoneMsg = "Next node:" + String(pos);
-  pPhoneChar->setValue(phoneMsg.c_str());
-  pPhoneChar->notify();
+  if (pos == 5)
+  {
+    String phoneMsg = "Mobot Parking...";
+    pPhoneChar->setValue(phoneMsg.c_str());
+    pPhoneChar->notify();
+  }
+  else
+  {
+    String phoneMsg = "Next node:" + String(pos);
+    pPhoneChar->setValue(phoneMsg.c_str());
+    pPhoneChar->notify();
+  }
 }
