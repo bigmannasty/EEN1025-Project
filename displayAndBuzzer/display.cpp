@@ -4,17 +4,19 @@
 #include <Adafruit_SSD1306.h>
 
 
+
 const short SCREEN_WIDTH = 128;
 const short SCREEN_HEIGHT = 64;
-const short I2C_SDA = 8;
-const short I2C_SCL = 9;
 
+//Pin Configuration for OLED
+const short I2C_SDA = 8; //Serial Data
+const short I2C_SCL = 9; //Serial Clock
+
+
+//Constructs an object to talk to the screen
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 displayState currDisplayState = TEXT;
-
-short node = -1;
-const short route[] = {0, 1, 3, 2, 5};
 
 //Function to Draw arrow on display
 void drawArrow32x16(int x, int y) {
@@ -40,84 +42,39 @@ void drawArrow32x16(int x, int y) {
   );
 }
 
+//
 const short arrowX = 48;
 const short arrowY = 24;
-const short centre = 8;
-short scrollVertical = 8;
-const short uiInterval = 1;
 
-unsigned long lastDisplayUpdate = 0;
 short currentNode = 0;
 short nextNode = 0;
 
 void nodeUpdate() {
 	
   //Draws arrow
-	
   display.clearDisplay();
-	
   drawArrow32x16(arrowX, arrowY);
 	
-
-	
   //Draws Static Text
-	
   display.setTextSize(7);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(4, scrollVertical);
+  display.setCursor(4, 8);
   display.print(currentNode);
-  display.setCursor(86, scrollVertical);
+  display.setCursor(86, 8);
   display.print(nextNode);
   display.display();
+
   currentNode = nextNode;
-	
   currDisplayState = IDLE;
 }
 
-/*
-void nodeUpdate() {
-  unsigned long currentMillis = millis();
-
-  //Check if enough time has elapsed to update animation
-  if (currentMillis - lastDisplayUpdate >= uiInterval)
-  {
-    lastDisplayUpdate = currentMillis;
-
-    //Draws arrow
-    display.clearDisplay();
-    drawArrow32x16(arrowX, arrowY);
-
-    //Draws Scrolling Text
-    display.setTextSize(7);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(4, scrollVertical);
-    display.print(currentNode);
-    display.setCursor(86, scrollVertical);
-    display.print(nextNode);
-    display.display();
-
-    //Decrement y pos of node numbers
-    scrollVertical -=4;
-
-    //If scrolled to the top, jump to the bottom
-    if (scrollVertical < -64 && scrollVertical > -100) {
-      scrollVertical = 64;
-    }
-
-    if (scrollVertical == 8) {
-      currDisplayState = IDLE;
-      currentNode = nextNode;
-    }
-  }
-}
-*/
+//Sets nextNode and sets state for updateDisplay()
 void startNodeUpdate(short node) {
   nextNode = node;
-  scrollVertical = 4;
-  lastDisplayUpdate = millis();
   currDisplayState = NODE;
 }
 
+//Variable & Function to change text on screen from "START" -> "PARK"
 bool parked = false;
 void textUpdate() {
   //Will display start text
@@ -131,6 +88,7 @@ void textUpdate() {
     display.display();
   }
   else
+  //Will display park text
   {
     display.clearDisplay();
     display.setTextColor(SSD1306_WHITE);
@@ -139,21 +97,13 @@ void textUpdate() {
     display.print("PARK");
     display.display();
   }
+
 }
+//Given value parameter, will set parked and set state
 void startText(bool value) {
-  if (value == true)
-  {
-    parked = true;
-    currDisplayState = TEXT;
-  }
-  else
-  {
-    currDisplayState = TEXT;
-  }
-}
-
-void startWFC() {
-
+  parked = value;
+  currDisplayState = TEXT; // FORCE the state to TEXT so updateDisplay() sees it
+  textUpdate();            // Update immediately
 }
 
 void wfcDisplay() {
@@ -174,7 +124,6 @@ void updateDisplay() {
   switch(currDisplayState)
   {
     case IDLE:
-      display.clearDisplay();
       break;
     case NODE:
       nodeUpdate();

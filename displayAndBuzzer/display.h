@@ -9,6 +9,7 @@ enum displayState{
   IDLE,
   NODE,
 };
+extern displayState currDisplayState;
 
 extern const short SCREEN_WIDTH;
 extern const short SCREEN_HEIGHT;

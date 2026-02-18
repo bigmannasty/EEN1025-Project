@@ -36,31 +36,32 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   }
 };
 
-// Callback for when the server sends a notification
 static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, 
                             uint8_t* pData, size_t length, bool isNotify) {
   
-    int value = *pData; // Simple cast for a single byte/integer
+    int value = *pData; 
     Serial.print("Received Value: ");
     Serial.println(value);
 
-    //Logic for nextPosition node value 
-    if (value != 0)
-    {
-      startBuzz(value);
-      startNodeUpdate(value);
-      nextNode = value;
+    // Case A: Received a 5 AND we are already at Node 5 (Double 5 logic)
+    if (value == 5 && currentNode == 5) {
+        Serial.println("PARK detected");
+        startTheme();      // Play the final theme
+        startText(true);   // This sets parked = true and state = TEXT
+        currBuzzerState = NOBUZZ;
+    } 
+    // Case B: Received a 5 for the first time (Entering destination)
+    else if (value == 5) {
+        Serial.println("Entering Destination Node 5");
+        startBuzz(value);
+        startNodeUpdate(value); // This will animate the scroll to 5
+        // Once this animation finishes, currentNode will become 5
     }
-    //When nextPos is 5 (going to park), play theme
-    if (value == 5)
-    {
-      startTheme();
-    }
-    //When parked (received 5 twice), display PARK and stop buzzer
-    else if (value == 5 && currentNode == 5)
-    {
-      startText(true);
-      currBuzzerState = NOBUZZ;
+    // Case C: Any other standard node update
+    else if (value != 0) {
+        Serial.println("Standard Node Update");
+        startBuzz(value);
+        startNodeUpdate(value);
     }
 }
 
@@ -78,6 +79,7 @@ void setup() {
   /*
   Initialise connection, start scanning, and start connecting 
   */
+  wfcDisplay();
   BLEDevice::init("DCU-SAUR");
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
@@ -108,7 +110,7 @@ void loop() {
   if (currentState == WAITING_FOR_CONN || currentState == CONNECTING) {
     wfcDisplay();
   } else {
-    updateDisplay(); // Your normal "Connected" GUI
+    updateDisplay();
   }
 
   updateBuzzer();
