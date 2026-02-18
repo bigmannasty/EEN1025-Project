@@ -103,7 +103,7 @@ void motor180() {
   delay(200);
   digitalWrite(motor1Phase, HIGH);
   digitalWrite(motor2Phase, HIGH);
-  delay(200);
+  delay(400);
   lineDetected = false;
   //while mid sensor isnt on line, keep on turnin
   while (!lineDetected) {

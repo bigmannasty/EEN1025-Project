@@ -15,10 +15,10 @@ int DistanceValue = 0;
 int lastDist = 0;
 bool finalDrive = false;
 
+int detectPin = 46;
 
-//const int trigPin = 16;
-//const int echoPin = 17;
-
+int opticalActivePin1 = 13;
+int opticalActivePin2 = 14;
 
 //node and wight arrays
 int nodes[][5] = {{0, 1, 1, 0, 1}, {1, 0, 1, 1, 1}, {1, 1, 0, 1, 0}, {0, 1, 1, 0, 1}, {1, 1, 0, 1, 0}}; // direct node connections, 0 - no direct connection, 1 - direct connection
@@ -55,6 +55,8 @@ bool parkingFromN34PreFDStage2 = false; // parking from node 3 or 4 before final
 
 bool returnToStart = false; // flag for when returning to a start node after detecting an obstacle
 
+int availRoutes[] = {3, 4, 3, 3, 3};
+
 
 
 void nodeDecLoop() {
@@ -86,6 +88,8 @@ void setup() {
   Serial.println("");
   Serial.println("");
   
+  pinMode(opticalActivePin1, OUTPUT);
+  pinMode(opticalActivePin2, OUTPUT);
 
   
   // conncect up to wifi
@@ -97,8 +101,9 @@ void setup() {
     delay(3000);
   }
   
-
   bluetoothSetup();
+  while (!deviceConnected) {
+  }
 
 
   // set lineDetected to false because i forgot why
@@ -106,7 +111,8 @@ void setup() {
   if (routeList[-2] == 1) { parkingFromNode1 = true; }
 
   pinSetup();
-  
+  pinMode(detectPin, INPUT);
+
 }
 
 
@@ -140,6 +146,14 @@ void loop() {
   // node detection logic
   if (nodeDetected == true && nextPos != 5) { // if reached a node
 
+    
+    Serial.println("START NODEDEC");
+    Serial.print("START POS: ");
+    Serial.println(startPos);
+    Serial.print("NEXT POS: ");
+    Serial.println(nextPos);
+    
+
     motorDrive(0,0); // stop!!
     delay(50);
 
@@ -162,7 +176,7 @@ void loop() {
         // checking for direct node connections
         if (nodes[startPos][nextPos] == 0 && nextPos != 5) { // if theres no direct connection between the 2 nodes
           
-          if (startPos == 0 || startPos == 3) { // if going 0 -> 3 or vice versa use the 1st ranking
+          if ((startPos == 0 && nextPos == 3) || (startPos == 3 && nextPos == 0)) { // if going 0 -> 3 or vice versa use the 1st ranking
             currentNodeRank = 0;
             while (nodes[startPos][nextPos] == 0) {
               nextPos = nodePathRank03[currentNodeRank];
@@ -170,7 +184,7 @@ void loop() {
             }
           } 
           
-          else if (startPos == 2 || startPos == 4) {  // if going 2 -> 4 or vice versa use the 2nd ranking
+          else if ((startPos == 2 && nextPos == 4) || (startPos == 4 && nextPos == 2)) {  // if going 2 -> 4 or vice versa use the 2nd ranking
             currentNodeRank = 0;
             while (nodes[startPos][nextPos] == 0) {
               nextPos = nodePathRank24[currentNodeRank];
@@ -179,7 +193,28 @@ void loop() {
           }
 
           else if (startPos == 1) {
+            if (nextPos == 0) { if (nodes[1][4] == 1) { nextPos = 4; } else if (nodes[0][2]) { nextPos = 3; } else if (nodes[3][4]) { nextPos = 2; } }
+            else if (nextPos == 4) { if (nodes[1][0] == 1) { nextPos = 0; } else if (nodes[0][2]) { nextPos = 3; } else if (nodes[3][4]) { nextPos = 2; } }
+            else if (nextPos == 2) { if (nodes[1][3] == 1) { nextPos = 3; } else if (nodes[0][2]) { nextPos = 4; } else if (nodes[3][4]) { nextPos = 0; } }
+            else if (nextPos == 3) { if (nodes[1][2] == 1) { nextPos = 2; } else if (nodes[0][2]) { nextPos = 4; } else if (nodes[3][4]) { nextPos = 0; } }
+          }
 
+          else if (availRoutes[startPos] >= 2) {
+            for (int i; nodes[startPos][nextPos] != 1 && i < 5; i++) {
+              if (nodes[i][nextPos] == 1) { nextPos = i; }
+            }
+            if (nodes[startPos][nextPos] == 0) {
+              if (startPos == 0) { nextPos = 2; }
+              else if (startPos == 2) { nextPos = 0; }
+              else if (startPos == 3) { nextPos = 4; }
+              else if (startPos == 4) { nextPos = 3; }
+            }
+          }
+
+          else if (availRoutes[startPos] == 1) {
+            for (int i = 0; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
+              nextPos = i;
+            }
           }
         }
         
@@ -187,7 +222,11 @@ void loop() {
         motorDrive(speedL, speedR); // get that jawn movin
         nodeDecLoop(); // go til off node
 
-        //Serial.println("main route loop");
+        Serial.println("main route loop");
+        Serial.print("START POS: ");
+        Serial.println(startPos);
+        Serial.print("NEXT POS: ");
+        Serial.println(nextPos);
 
       }
 
@@ -195,10 +234,65 @@ void loop() {
       else if (nextPos != routeList[currentRouteNodeIndex]) { // if the node reached was a midpoint
         startPos = nextPos; // reached node is new start
         nextPos = routeList[currentRouteNodeIndex]; // nextpos becomes the original main destination node from the routelist
+
+
+        if (nodes[startPos][nextPos] == 0 && nextPos != 5) { // if theres no direct connection between the 2 nodes
+          
+          if ((startPos == 0 && nextPos == 3) || (startPos == 3 && nextPos == 0)) { // if going 0 -> 3 or vice versa use the 1st ranking
+            currentNodeRank = 0;
+            while (nodes[startPos][nextPos] == 0) {
+              nextPos = nodePathRank03[currentNodeRank];
+              if (nodes[startPos][nextPos] == 0) { currentNodeRank++; }
+            }
+            Serial.println("IF COND 1");
+          } 
+          
+          else if ((startPos == 2 && nextPos == 4) || (startPos == 4 && nextPos == 2)) {  // if going 2 -> 4 or vice versa use the 2nd ranking
+            currentNodeRank = 0;
+            while (nodes[startPos][nextPos] == 0) {
+              nextPos = nodePathRank24[currentNodeRank];
+              if (nodes[startPos][nextPos] == 0) { currentNodeRank++; }
+            }
+            Serial.println("IF COND 2");
+          }
+
+          else if (startPos == 1) {
+            if (nextPos == 0) { if (nodes[1][4] == 1) { nextPos = 4; } else { nextPos = 3; } }
+            else if (nextPos == 4) { if (nodes[1][0] == 1) { nextPos = 0; } else { nextPos = 2; } }
+            else if (nextPos == 2) { if (nodes[1][3] == 1) { nextPos = 3; } else { nextPos = 4; } }
+            else if (nextPos == 3) { if (nodes[1][2] == 1) { nextPos = 2; } else { nextPos = 0; } }
+            Serial.println("IF COND 3");
+          }
+
+          else if (availRoutes[startPos] >= 2) {
+            for (int i; nodes[startPos][nextPos] != 1 && i < 5; i++) {
+              if (nodes[i][nextPos] == 1) { nextPos = i; }
+            }
+            if (nodes[startPos][nextPos] == 0) {
+              if (startPos == 0) { nextPos = 2; }
+              else if (startPos == 2) { nextPos = 0; }
+              else if (startPos == 3) { nextPos = 4; }
+              else if (startPos == 4) { nextPos = 3; }
+            }
+            Serial.println("IF COND 4");
+          }
+
+          else if (availRoutes[startPos] == 1) {
+            for (int i = 0; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
+              nextPos = i;
+            }
+            Serial.println("IF COND 5");
+          }
+        }
+
         passedJunc = false; // reset junction var
         motorDrive(speedL, speedR);
         nodeDecLoop();
-        //Serial.println("sub route loop");
+        Serial.println("sub route loop");
+        Serial.print("START POS: ");
+        Serial.println(startPos);
+        Serial.print("NEXT POS: ");
+        Serial.println(nextPos);
 
       }
 
@@ -248,17 +342,43 @@ void loop() {
 
       if (currentDir != nodeDirection[startPos][nextPos] && nextPos != 5 && routeList[currentRouteNodeIndex] != 5) { motor180(); } // check for correct direction, if not going the right way flip round
 
-
     }
 
-    // IN THE CASE AN OBS WAS DETECTED DISREGARD THE NEXT NODE SINCE ITS JUST GONNA BE STARTPOS
+
+    // WHEN GOING BACK TO NODE AFTER OBSTACLE DETECT
     else if (passedJunc == true && returnToStart) {
-      returnToStart = true;
+      returnToStart = false;
+      motorDrive(0,0);
+      Serial.println("");
+      Serial.println("BACK TO START");
+      Serial.println("");
+      for (int i = 0; i < 5; i++) {
+        if (availRoutes[i] == 0) { availRoutes[i] = 1; }
+      }
+      /*
+      if (nodes[startPos][1] == 1) { nextPos = 1; }
+      else {
+        for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
+          nextPos = nodes[startPos][i];
+        }
+      }
+
+      passedJunc = false;
+
+      if ( (startPos == 0 && nextPos == 4) || (startPos == 4 && nextPos == 0) ) { passedJunc = true; } // if starts at 0 and goes 4 or vice versa, next node is not junction
+      else if ( (startPos == 2 && nextPos == 3) || (startPos == 3 && nextPos == 2) ) { passedJunc = true; } // if starts at 2 and goes 3 or vice versa, next node is not junction
+
+      //motorDrive(speedL, speedR);
+      //nodeDecLoop();
+
+      if (currentDir != nodeDirection[startPos][nextPos] && nextPos != 5 && routeList[currentRouteNodeIndex] != 5) { motor180(); }
+      */
+
     }
 
 
 
-    // at junction logic
+    // TURNING AT A JUNCTION LOGIC
     else if (passedJunc == false) { // if at a junction
 
       motorDrive(speedL, speedR);
@@ -270,6 +390,8 @@ void loop() {
         motorTurn(currentDir);
         if (startPos == 0) { currentDir = 0; } // if coming anti-clock from 0, change direction to left
         else if (startPos == 4) { currentDir = 1; } // if coming anti-clock from 4, change direction to right
+        Serial.print("TURNING: ");
+        Serial.println(currentDir);
       } 
 
 
@@ -277,12 +399,19 @@ void loop() {
       else if (startPos == 1) {
         if (nextPos == 2 || nextPos == 4) { motorTurn(1); currentDir = 1; } // if going to 2 or 4, turn left and set the direction to anti clock (1)
         else if (nextPos == 0 || nextPos == 3) { motorTurn(0); currentDir = 0; } // if going to 0 or 3, turn right and set the direction to clockwise (0)
+        Serial.print("TURNING: ");
+        Serial.println(currentDir);
       }
 
       passedJunc = true; // indicate that the junction has been passed
 
     }
 
+    Serial.println("END NODEDEC");
+    Serial.print("START POS: ");
+    Serial.println(startPos);
+    Serial.print("NEXT POS: ");
+    Serial.println(nextPos);
 
   }
 
@@ -293,11 +422,13 @@ void loop() {
     finalDrive = true;
   }
 
+  /*
   else if (nodeDetected == true && passedJunc == false && startPos == 1 && nextPos == 5) {
     motorDrive(0,0);
     delay(200);
     finalDrive = true;
   }
+  */
 
   else if (nodeDetected == true && passedJunc == true && startPos == 1 && nextPos == 5) {
     motorDrive(0,0);
@@ -307,124 +438,238 @@ void loop() {
   
 
 
-/*
-  //turn-around at an obstacle
-  if (obstacleDetected == true) {
-    Serial.println("Obstacle Detected");
-    //motor180();
-    delay(2000);
-    if (distanceSense() == false) { obstacleDetected = false; }
-    else { while (1) { motorDrive(0,0); } }
+  // OBSTACLE DETECT CHECK
+  if (digitalRead(detectPin) == 1 && !finalDrive) {
+    obstacleDetected = true;
+    Serial.println("DETCTED");
   }
-*/
+  else { obstacleDetected = false; }
 
-  // OBSTACLE DETECTION CONDITIONS
-  if (obstacleDetected) {
-    motorDrive(0,0);
-    if ( ( (startPos == 0 || startPos == 3) && currentDir == 0 ) || ( (startPos == 2 || startPos == 4) && currentDir == 1) ) { // obstacle on the straights 0/4 or 2/3
-      nodes[startPos][nextPos] = 0; // set node connection to 0 denoting that there is no direct connection
-      nodes[nextPos][startPos] = 0;
-      returnToStart = true;
-      if (nodes[startPos][1] == 1) { nextPos = 1; }
-      else {
-        for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
-          nextPos = nodes[startPos][i];
-        }
+  
+
+  //OBSTACLE DETECTION LOGIC AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  if (obstacleDetected && !finalDrive) {
+
+    if ( (nextPos == 1 && passedJunc == true) || (startPos == 1 && passedJunc == false) ) { // IF OBSTACLE IS EITHER SIDE OF 1
+      if ((startPos + nextPos) == 1 || (startPos + nextPos) == 3) { // IF NODE 0 OR 2 IS INVOLVED, BLOCK EM OFF
+        nodes[0][1] = 0;
+        nodes[1][0] = 0;
+
+        nodes[2][1] = 0;
+        nodes[1][2] = 0;
+
+        availRoutes[0] -= 1;
+        availRoutes[1] -= 2;
+        availRoutes[2] -= 1;
+      }
+      else { // OTHERWISE BLOCK OFF 3 AND 4
+        nodes[3][1] = 0;
+        nodes[1][3] = 0;
+
+        nodes[4][1] = 0;
+        nodes[1][4] = 0;
+
+        availRoutes[3] -= 1;
+        availRoutes[1] -= 2;
+        availRoutes[4] -= 1;
       }
     }
 
-    else if (startPos != 1) { // IF GOING FROM A NORMAL  NODE
-      if (startPos == 0 || startPos == 2) { nodes[0][2] = 0; nodes[2][0] = 0; } // cancel connection between mirrors 0/2
-      else if (startPos == 3 || startPos == 4) { nodes[3][4] = 0; nodes[4][3] = 0; } // cancel connection between mirrors 3/4
 
-      if (passedJunc == false) { // if obstacle is on a bend before a junc
-        nodes[startPos][1] = 0; // cancel start node connection to node 1
-        nodes[1][startPos] = 0;
-        returnToStart = true; // go back whence you came
-        passedJunc = true;
 
-        for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
-          nextPos = nodes[startPos][i];
-        }
+    else if ( (nextPos == 1 && passedJunc == false) || (startPos == 1 && passedJunc == true) ) { // IF OBSTACLE IS ON A BEND GOING TO OR FROM 1
+      //0 AND 2 STUFF
+      if (startPos == 0 || startPos == 2) {
+        nodes[startPos][1] = 0; //CUT FROM 1
+        nodes[1][startPos] = 0; //BOTH WAYS
 
+        availRoutes[startPos] -= 1;
+        availRoutes[1] -= 1;
+
+        nodes[0][2] = 0;
+        nodes[2][0] = 0;
+
+        availRoutes[0] -= 1;
+        availRoutes[2] -= 1;
       }
 
-      else if (nextPos != 1) { // if obstacle is on a bend after a junc and not going 1
-         
-        nodes[nextPos][1] = 0; // cancel next node connection to node 1
-        nodes[1][nextPos] = 0;
-        
-        passedJunc = false; // you'll meet a junction again
+      else if (nextPos == 0 || nextPos == 2) {  //IF GOING TO 0 OR 2 FROM 1
+        nodes[nextPos][1] = 0;  //CUT FROM 1
+        nodes[1][nextPos] = 0;  //BOTH WAYS
 
-        if (nodes[startPos][1] == 1) { nextPos = 1; returnToStart = false; } // do not return. 
-        else {
-          for (int i; nodes[startPos][nextPos] == 0; i++) { // find the next available node to go to
-          nextPos = nodes[startPos][i];
+        availRoutes[nextPos] -= 1;
+        availRoutes[1] -= 1;
+
+        nodes[0][2] = 0;
+        nodes[2][0] = 0;
+
+        availRoutes[0] -= 1;
+        availRoutes[2] -= 1;
+      }
+
+
+      //3 AND 4 STUFF
+      else if (startPos == 3 || startPos == 4) {
+        nodes[startPos][1] = 0; //CUT FROM 1
+        nodes[1][startPos] = 0; //BOTH WAYS
+
+        availRoutes[startPos] -= 1;
+        availRoutes[1] -= 1;
+
+        nodes[3][4] = 0;
+        nodes[4][3] = 0;
+
+        availRoutes[3] -= 1;
+        availRoutes[4] -= 1;
+      }
+
+      else if (nextPos == 3 || nextPos == 4) {  //IF GOING TO 3 OR 4 FROM 1
+        nodes[nextPos][1] = 0;  //CUT FROM 1
+        nodes[1][nextPos] = 0;  //BOTH WAYS
+
+        availRoutes[nextPos] -= 1;
+        availRoutes[1] -= 1;
+
+        nodes[3][4] = 0;
+        nodes[4][3] = 0;
+
+        availRoutes[3] -= 1;
+        availRoutes[4] -= 1;
+      }
+      
+    }
+
+
+    else if (currentDir == 0) { //IF GOING CLOCKWISE
+      if (startPos == 0 || startPos == 3) { //FROM NODE 0 OR NODE 3 ON THE STRAIGHT
+        if (startPos == 0) { nodes[0][4] = 0; nodes[4][0] = 0; availRoutes[0] -= 1; availRoutes[4] -= 1; }  //IF 0 -> 4 CUT EM
+        else { nodes[3][2] = 0; nodes[2][3] = 0; availRoutes[2] -= 1; availRoutes[3] -= 1; }  //IF 3 -> 2 CUT EM
+      }
+
+      else if (startPos == 2 || startPos == 4) {
+        if (passedJunc == false) {  //IF OBSTACLE IS ON THE 2 OR 4 BEND
+          if (startPos == 2) {  //2 BEND
+            nodes[0][2] = 0;
+            nodes[2][0] = 0;
+            nodes[2][1] = 0;
+            nodes[1][2] = 0;
+
+            availRoutes[0] -= 1;
+            availRoutes[1] -= 1;
+            availRoutes[2] -= 2;
+
+
           }
-          returnToStart = true; // go back whence you came
+          else {  //4 BEND
+            nodes[3][4] = 0;
+            nodes[4][3] = 0;
+            nodes[4][1] = 0;
+            nodes[1][4] = 0;
+
+            availRoutes[3] -= 1;
+            availRoutes[1] -= 1;
+            availRoutes[4] -= 2;
+          }
         }
 
+        else if (passedJunc == true) {  //IF OBSTACLE IS ON THE 0 OR 3 BEND
+          if (startPos == 2) { //0 BEND
+            nodes[0][2] = 0;
+            nodes[2][0] = 0;
+            nodes[0][1] = 0;
+            nodes[1][0] = 0;
+
+            availRoutes[0] -= 2;
+            availRoutes[1] -= 1;
+            availRoutes[2] -= 1;
+          }
+          else {  //3 BEND
+            nodes[3][4] = 0;
+            nodes[4][3] = 0;
+            nodes[3][1] = 0;
+            nodes[1][3] = 0;
+
+            availRoutes[3] -= 2;
+            availRoutes[1] -= 1;
+            availRoutes[4] -= 1;
+          }
+        }
       }
-
-      else if (nextPos == 1) { // if obstacle is either side of 1
-        if (startPos == 0 || startPos == 2) { nodes[0][1] = 0; nodes[1][0] = 0; nodes[2][1] = 0; nodes[1][2] = 0; } // cancel connection between mirrors 0/2 and 1
-        else if (startPos == 3 || startPos == 4) { nodes[3][1] = 0; nodes[1][3] = 0; nodes[4][1] = 0; nodes[1][4] = 0; } // cancel connection between mirrors 3/4 and 1
-
-        passedJunc = false;
-        nextPos = startPos;
-        startPos = 1;
-
-
-
-      }
-
     }
 
-
-
-    else if (startPos == 1) { // if starting at node 1
-      if (passedJunc = false) { // if pre junctiong obstacle
-        if (currentDir == 1) { nodes[0][1] = 0; nodes[1][0] = 0; nodes[2][1] = 0; nodes[1][2] = 0; } // if going right to 0 or 2 block em off
-        else if (currentDir == 0) { nodes[3][1] = 0; nodes[1][3] = 0; nodes[4][1] = 0; nodes[1][4] = 0; } // else if going left to 3 or 4 block em off
-
-        passedJunc = true;
-        startPos = nextPos;
-        nextPos = 1;
-        
+    else if (currentDir == 1) { //GOING ANTI CLOCKWISE
+      if (startPos == 2 || startPos == 4) { //FROM NODE 2 OR NODE 4 ON THE STRAIGHT
+        if (startPos == 4) { nodes[0][4] = 0; nodes[4][0] = 0; }  //IF 4 -> 0 CUT EM
+        else { nodes[3][2] = 0; nodes[2][3] = 0; }  //IF 2 -> 3 CUT EM
       }
 
-      else if (passedJunc == true) {
-        nodes[1][nextPos] = 0;
-        nodes[nextPos][1] = 0;
+      else if (startPos == 0 || startPos == 3) {
+        if (passedJunc == true) {  //IF OBSTACLE IS ON THE 2 OR 4 BEND
+          if (startPos == 2) {  //2 BEND
+            nodes[0][2] = 0;
+            nodes[2][0] = 0;
+            nodes[2][1] = 0;
+            nodes[1][2] = 0;
 
-        if (nextPos == 0 || nextPos == 2) { nodes[0][2] = 0; nodes[2][0] = 0; }
-        else if (startPos == 3 || startPos == 4) { nodes[3][4] = 0; nodes[4][3] = 0; }
+            availRoutes[0] -= 1;
+            availRoutes[1] -= 1;
+            availRoutes[2] -= 2;
+          }
+          else {  //4 BEND
+            nodes[3][4] = 0;
+            nodes[4][3] = 0;
+            nodes[4][1] = 0;
+            nodes[1][4] = 0;
 
-        passedJunc == false;
-        startPos = nextPos;
-        nextPos = 1;
-        
+            availRoutes[3] -= 1;
+            availRoutes[1] -= 1;
+            availRoutes[4] -= 2;
+          }
+        }
+
+        else if (passedJunc == false) {  //IF OBSTACLE IS ON THE 0 OR 3 BEND
+          if (startPos == 2) { //0 BEND
+            nodes[0][2] = 0;
+            nodes[2][0] = 0;
+            nodes[0][1] = 0;
+            nodes[1][0] = 0;
+
+            availRoutes[0] -= 2;
+            availRoutes[1] -= 1;
+            availRoutes[2] -= 1;
+          }
+          else {  //3 BEND
+            nodes[3][4] = 0;
+            nodes[4][3] = 0;
+            nodes[3][1] = 0;
+            nodes[1][3] = 0;
+
+            availRoutes[3] -= 2;
+            availRoutes[1] -= 1;
+            availRoutes[4] -= 1;
+          }
+        }
       }
-
     }
 
+    if (passedJunc == true) { passedJunc = false; }
+    else { passedJunc = true; }
+
+    returnToStart = true;
+    int temp = startPos;
+    startPos = nextPos;
+    nextPos = temp;
 
     motor180();
+
+    Serial.println("OBSTACLE DETECT");
     
+
   }
 
-  /*
-  if (finalDrive) {
-    DistanceValue = analogRead(distAnalogPin);
-    if (DistanceValue >= 2250 && lastDist >= 2250) {
-      motorDrive(0,0);
-      sendArrival(nextPos);
-      sendNode(nextPos);
-      while (1) {}
-    }
-    lastDist = DistanceValue;
-  }
-  */
+
+
+
 
   if (finalDrive) {
     trigPulse();
@@ -470,6 +715,10 @@ void loop() {
   int correction = error * TURN_GAIN;
   int leftSpeed = speedL;
   int rightSpeed = speedR;
+
+  if (correction < 0) { digitalWrite(opticalActivePin1, 1); digitalWrite(opticalActivePin2, 0); }
+  else if (correction > 0) { digitalWrite(opticalActivePin1, 0); digitalWrite(opticalActivePin2, 1); }
+  else { digitalWrite(opticalActivePin1, 0); digitalWrite(opticalActivePin2, 0); }
 
   
 
