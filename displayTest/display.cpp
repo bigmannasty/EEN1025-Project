@@ -11,16 +11,7 @@ const short I2C_SCL = 9;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
-enum displayState{
-  TEXT,
-  IDLE,
-  NODE
-};
-
 displayState currDisplayState = TEXT;
-
-short node = -1;
-const short route[] = {0, 1, 3, 2, 5};
 
 //Function to Draw arrow on display
 void drawArrow32x16(int x, int y) {
@@ -50,43 +41,33 @@ const short arrowX = 48;
 const short arrowY = 24;
 const short centre = 8;
 short scrollVertical = 8;
-const int uiInterval = 1;
-
-void updateUI(short node) {
-  short scrollVertical = 8;
-  while (scrollVertical >= -64)
-  {
-    display.setTextSize(7);
-    drawArrow32x16(arrowX, arrowY);
-    display.setCursor(4, scrollVertical);
-    display.print(node);
-    display.setCursor(86, scrollVertical);
-    display.print(node);
-    display.display();
-    delay(1);
-    scrollVertical -= 4;     
-    display.clearDisplay();
-  }
-  scrollVertical = 64;
-  while (scrollVertical >= 8)
-  {
-    drawArrow32x16(arrowX, arrowY);
-    display.setCursor(4, scrollVertical);
-    display.print(node);
-    display.setCursor(86, scrollVertical);
-    display.print(node);
-    display.display();
-    delay(1);
-    scrollVertical -= 4;     
-    display.clearDisplay();
-  }
-}
+const short uiInterval = 1;
 
 unsigned long lastDisplayUpdate = 0;
-short currentNode = 5;
+short currentNode = 0;
 short nextNode = 0;
 
+/*
 void nodeUpdate() {
+  //Draws arrow
+  display.clearDisplay();
+  drawArrow32x16(arrowX, arrowY);
+
+  //Draws Static Text
+  display.setTextSize(7);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(4, scrollVertical);
+  display.print(currentNode);
+  display.setCursor(86, scrollVertical);
+  display.print(nextNode);
+  display.display();
+
+  currentNode = nextNode;
+  currDisplayState = IDLE;
+}
+*/
+
+void nodeScroll() {
   unsigned long currentMillis = millis();
 
   //Check if enough time has elapsed to update animation
@@ -112,25 +93,50 @@ void nodeUpdate() {
 
     //If scrolled to the top, jump to the bottom
     if (scrollVertical < -64 && scrollVertical > -100) {
-      scrollVertical = 64;
+      nodeScrollUpdate();
     }
+  }
+}
+
+void nodeScrollUpdate() {
+  unsigned long currentMillis = millis();
+  scrollVertical = 64;
+  //currentNode = nextNode;
+  //Check if enough time has elapsed to update animation
+  if (currentMillis - lastDisplayUpdate >= uiInterval)
+  {
+    lastDisplayUpdate = currentMillis;
+
+    //Draws arrow
+    display.clearDisplay();
+    drawArrow32x16(arrowX, arrowY);
+
+    //Draws Scrolling Text
+    display.setTextSize(7);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(4, scrollVertical);
+    display.print(currentNode);
+    display.setCursor(86, scrollVertical);
+    display.print(nextNode);
+    display.display();
+
+    //Decrement y pos of node numbers
+    scrollVertical -=4;
 
     if (scrollVertical == 8) {
       currDisplayState = IDLE;
-      currentNode = nextNode;
     }
   }
 }
 
 void startNodeUpdate(short node) {
-  nextNode = node;
   scrollVertical = 4;
   lastDisplayUpdate = millis();
-  currDisplayState = NODE;
+  nextNode = node;
+  currDisplayState = NODE_SCROLL;
 }
 
 bool parked = false;
-
 void textUpdate() {
   //Will display start text
   if (parked == false)
@@ -164,16 +170,36 @@ void startText() {
   }
 }
 
+
+
+void wfcDisplay() {
+  display.clearDisplay();
+  display.setTextSize(3);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 16);
+  display.print("WFC");
+  
+  // Simple animated loading bar or dots based on millis()
+  int dots = (millis() / 500) % 4; 
+  for(int i=0; i<dots; i++) display.print(".");
+  display.display();
+}
+
+
 void updateDisplay() {
   switch(currDisplayState)
   {
     case IDLE:
-      break;
-    case NODE:
-      nodeUpdate();
+      display.clearDisplay();
       break;
     case TEXT:
       textUpdate();
+      break;
+    case NODE_SCROLL:
+      nodeScroll();
+      break;
+    case NODE_UPDATE_SCROLL:
+      nodeScrollUpdate();
       break;
   }
 }

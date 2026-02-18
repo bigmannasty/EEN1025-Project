@@ -13,9 +13,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 
 displayState currDisplayState = TEXT;
 
-short node = -1;
-const short route[] = {0, 1, 3, 2, 5};
-
 //Function to Draw arrow on display
 void drawArrow32x16(int x, int y) {
   const short width = 32;

@@ -1,9 +1,6 @@
 #include <Wire.h>
 #include <display.h>
 
-}
-
-
 void setup() {
   Serial.begin(115200);
 
@@ -15,9 +12,10 @@ void setup() {
     Serial.println("SSD1306 allocation failed");
     while (true);
   }
-  //startNodeUpdate(2);
+  startNodeUpdate(2);
   //startText();
 }
 
 void loop() {
+  updateDisplay();
 }
