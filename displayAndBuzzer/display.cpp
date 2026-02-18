@@ -63,25 +63,15 @@ void nodeUpdate() {
   //Draws Static Text
 	
   display.setTextSize(7);
-	
   display.setTextColor(SSD1306_WHITE);
-	
   display.setCursor(4, scrollVertical);
-	
   display.print(currentNode);
-	
   display.setCursor(86, scrollVertical);
-	
   display.print(nextNode);
-	
   display.display();
-	
-
-	
   currentNode = nextNode;
 	
   currDisplayState = IDLE;
-	
 }
 
 /*
