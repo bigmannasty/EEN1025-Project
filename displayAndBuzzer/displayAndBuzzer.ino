@@ -62,14 +62,13 @@ static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
     // Case A: Received a 5 AND we are already at Node 5 (Double 5 logic)
     if (value == 5 && currentNode == 5) {
         Serial.println("PARK detected");
-        startTheme();      // Play the final theme
         startText(true);   // This sets parked = true and state = TEXT
         currBuzzerState = NOBUZZ;
     } 
     // Case B: Received a 5 for the first time (Entering destination)
     else if (value == 5) {
         Serial.println("Entering Destination Node 5");
-        startBuzz(value);
+        startTheme();      // Play the final theme
         startNodeUpdate(value); // This will animate the scroll to 5
         // Once this animation finishes, currentNode will become 5
     }
